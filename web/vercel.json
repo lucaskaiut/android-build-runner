@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://runner.noxtecnologias.com.br/api/:path*"
+    },
+    {
+      "source": "/sanctum/:path*",
+      "destination": "https://runner.noxtecnologias.com.br/sanctum/:path*"
+    }
+  ]
+}
