@@ -1,0 +1,29 @@
+# Environment / secrets
+.env
+api/.env
+
+# Laravel
+api/vendor/
+api/storage/*.key
+api/storage/app/artifacts/
+api/storage/logs/*.log
+api/bootstrap/cache/*.php
+!api/bootstrap/cache/.gitignore
+
+# Frontend
+web/node_modules/
+web/dist/
+web/.env
+
+# Runner (local config with tokens must never be committed)
+runner/config/*.json
+!runner/config/*.example.json
+runner/logs/
+runner/.tmp/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
