@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 const apiTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://nginx:80'
+const allowedHosts = ['builds.noxtecnologias.com.br']
 
 const proxy = {
   '/api': { target: apiTarget, changeOrigin: false },
@@ -19,9 +20,11 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts,
     proxy,
   },
   preview: {
+    allowedHosts,
     proxy,
   },
   test: {
