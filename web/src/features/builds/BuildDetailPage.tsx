@@ -1,9 +1,22 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, Download, FileArchive, XOctagon } from 'lucide-react'
-import { BuildStatusBadge, RunnerStatusBadge } from '@/components/StatusBadge'
-import { Button, Card, ConfirmDialog, ErrorState, LoadingBlock, TableShell, Td, Th } from '@/components/ui'
+import { Link, useParams } from 'react-router'
+import { AlertTriangle, Download, FileArchive, XOctagon } from 'lucide-react'
+import { BuildStatusBadge } from '@/components/StatusBadge'
+import {
+  Button,
+  buttonClass,
+  Card,
+  ConfirmDialog,
+  ErrorState,
+  LoadingBlock,
+  MetaItem,
+  MetaList,
+  PageHeader,
+  TableShell,
+  Td,
+  Th,
+} from '@/components/ui'
 import { useToast } from '@/components/toast'
 import { api, apiErrorMessage } from '@/lib/api'
 import { formatBytes, formatDateTime, formatDuration, shortSha } from '@/lib/format'
@@ -15,7 +28,6 @@ const activeStatuses = ['queued', 'preparing', 'running']
 export function BuildDetailPage() {
   const params = useParams()
   const buildId = Number(params.id)
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
   const [confirmCancel, setConfirmCancel] = useState(false)
@@ -57,96 +69,89 @@ export function BuildDetailPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <Button variant="ghost" size="sm" onClick={() => navigate('/builds')} className="-ml-2 mb-1">
-          <ArrowLeft className="size-3.5" /> Builds
-        </Button>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-semibold">Build #{build.id}</h1>
-            <BuildStatusBadge status={build.status} label={build.status_label} />
-            {build.runner ? <RunnerStatusBadge status="online" label={`runner: ${build.runner.name}`} /> : null}
-          </div>
-          {isActive ? (
-            <Button variant="danger" size="sm" onClick={() => setConfirmCancel(true)}>
-              <XOctagon className="size-3.5" /> Cancelar build
+      <PageHeader
+        breadcrumb={
+          <>
+            <Link to="/builds" className="focus-ring rounded-sm hover:text-fg">
+              Builds
+            </Link>
+            <span aria-hidden>/</span>
+            <span className="text-fg-muted">#{build.id}</span>
+          </>
+        }
+        title={`Build #${build.id}`}
+        badge={<BuildStatusBadge status={build.status} label={build.status_label} />}
+        description={
+          <span>
+            {build.project ? (
+              <Link to={`/projects/${build.project.id}`} className="focus-ring rounded-sm text-accent hover:underline">
+                {build.project.name}
+              </Link>
+            ) : (
+              '—'
+            )}
+            {build.profile ? ` · ${build.profile.name}` : ''} · {build.source_label}
+            {build.runner ? ` · runner ${build.runner.name}` : ''}
+          </span>
+        }
+        actions={
+          isActive ? (
+            <Button variant="danger" onClick={() => setConfirmCancel(true)}>
+              <XOctagon className="size-4" aria-hidden /> Cancelar build
             </Button>
-          ) : null}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
       {build.cancel_requested && isActive ? (
-        <p className="rounded-md bg-[var(--app-warning-soft)] px-3 py-2 text-xs text-[var(--app-warning)]">
+        <p className="flex items-start gap-2 rounded-control bg-warning-soft px-3 py-2.5 text-body text-warning">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
           Cancelamento solicitado — aguardando o runner interromper a execução.
         </p>
       ) : null}
 
       {build.error_message ? (
-        <p className="rounded-md bg-[var(--app-danger-soft)] px-3 py-2 text-xs break-words text-[var(--app-danger)]">
+        <p className="flex items-start gap-2 rounded-control bg-danger-soft px-3 py-2.5 text-body break-words text-danger">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
           {build.error_message}
         </p>
       ) : null}
 
       <Card title="Execução">
-        <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <dt className="text-[11px] tracking-wide text-[var(--app-fg-subtle)] uppercase">Projeto</dt>
-            <dd>
-              <Link to={`/projects/${build.project?.id}`} className="text-[var(--app-accent)] hover:underline">
-                {build.project?.name ?? '—'}
+        <MetaList className="sm:grid-cols-2 lg:grid-cols-4">
+          <MetaItem label="Projeto">
+            {build.project ? (
+              <Link to={`/projects/${build.project.id}`} className="focus-ring rounded-sm text-accent hover:underline">
+                {build.project.name}
               </Link>
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[11px] tracking-wide text-[var(--app-fg-subtle)] uppercase">Perfil</dt>
-            <dd>{build.profile?.name ?? '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] tracking-wide text-[var(--app-fg-subtle)] uppercase">Origem</dt>
-            <dd>{build.source_label}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] tracking-wide text-[var(--app-fg-subtle)] uppercase">Runner</dt>
-            <dd>{build.runner?.name ?? 'Aguardando runner'}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] tracking-wide text-[var(--app-fg-subtle)] uppercase">Branch</dt>
-            <dd className="font-mono text-xs">{build.branch ?? '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] tracking-wide text-[var(--app-fg-subtle)] uppercase">Commit</dt>
-            <dd className="font-mono text-xs" title={build.commit_sha ?? ''}>
-              {build.commit_sha ?? 'resolvido no checkout'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[11px] tracking-wide text-[var(--app-fg-subtle)] uppercase">Código de saída</dt>
-            <dd className="font-mono text-xs">{build.exit_code ?? '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] tracking-wide text-[var(--app-fg-subtle)] uppercase">Duração</dt>
-            <dd>{formatDuration(build.duration_ms)}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] tracking-wide text-[var(--app-fg-subtle)] uppercase">Na fila em</dt>
-            <dd className="text-xs">{formatDateTime(build.queued_at)}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] tracking-wide text-[var(--app-fg-subtle)] uppercase">Início</dt>
-            <dd className="text-xs">{formatDateTime(build.started_at ?? build.claimed_at)}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] tracking-wide text-[var(--app-fg-subtle)] uppercase">Fim</dt>
-            <dd className="text-xs">{formatDateTime(build.finished_at)}</dd>
-          </div>
-        </dl>
+            ) : (
+              '—'
+            )}
+          </MetaItem>
+          <MetaItem label="Perfil">{build.profile?.name ?? '—'}</MetaItem>
+          <MetaItem label="Origem">{build.source_label}</MetaItem>
+          <MetaItem label="Runner">{build.runner?.name ?? 'Aguardando runner'}</MetaItem>
+          <MetaItem label="Branch" mono>
+            {build.branch ?? '—'}
+          </MetaItem>
+          <MetaItem label="Commit" mono title={build.commit_sha ?? ''}>
+            {build.commit_sha ?? 'resolvido no checkout'}
+          </MetaItem>
+          <MetaItem label="Código de saída" mono>
+            {build.exit_code ?? '—'}
+          </MetaItem>
+          <MetaItem label="Duração">{formatDuration(build.duration_ms)}</MetaItem>
+          <MetaItem label="Na fila em">{formatDateTime(build.queued_at)}</MetaItem>
+          <MetaItem label="Início">{formatDateTime(build.started_at ?? build.claimed_at)}</MetaItem>
+          <MetaItem label="Fim">{formatDateTime(build.finished_at)}</MetaItem>
+        </MetaList>
 
         {build.parameters && Object.keys(build.parameters).length > 0 ? (
-          <div className="mt-4 border-t border-[var(--app-border)] pt-3">
-            <p className="text-[11px] tracking-wide text-[var(--app-fg-subtle)] uppercase">Parâmetros</p>
-            <ul className="mt-1 flex flex-wrap gap-2">
+          <div className="mt-4 border-t border-line pt-3.5">
+            <p className="text-meta text-fg-subtle">Parâmetros</p>
+            <ul className="mt-1.5 flex flex-wrap gap-1.5">
               {Object.entries(build.parameters).map(([key, value]) => (
-                <li key={key} className="rounded bg-[var(--app-surface-2)] px-2 py-1 font-mono text-[11px]">
+                <li key={key} className="rounded-control bg-inset px-2 py-1 font-mono text-micro text-fg-muted">
                   {key}={value}
                 </li>
               ))}
@@ -156,12 +161,12 @@ export function BuildDetailPage() {
       </Card>
 
       <Card
-        title="Artefatos"
+        title={`Artefatos${artifacts.length > 0 ? ` · ${artifacts.length}` : ''}`}
         description="Arquivos disponibilizados pelo runner ao final da execução."
         bodyClassName="p-0"
       >
         {artifacts.length === 0 ? (
-          <p className="px-4 py-6 text-center text-xs text-[var(--app-fg-subtle)]">
+          <p className="px-4 py-5 text-center text-meta text-fg-subtle">
             {isActive ? 'Os artefatos aparecem quando a build terminar.' : 'Nenhum artefato registrado.'}
           </p>
         ) : (
@@ -170,32 +175,34 @@ export function BuildDetailPage() {
               <tr>
                 <Th>Arquivo</Th>
                 <Th>Tipo</Th>
-                <Th>Tamanho</Th>
+                <Th className="text-right">Tamanho</Th>
                 <Th>SHA-256</Th>
-                <Th className="w-28 text-right">Download</Th>
+                <Th className="w-24 text-right">Download</Th>
               </tr>
             </thead>
             <tbody>
               {artifacts.map((artifact) => (
-                <tr key={artifact.id}>
+                <tr key={artifact.id} className="transition-colors hover:bg-fill-hover/60">
                   <Td>
                     <div className="flex items-center gap-2">
-                      <FileArchive className="size-4 text-[var(--app-fg-subtle)]" />
-                      <span className="text-sm">{artifact.original_name}</span>
+                      <FileArchive className="size-4 shrink-0 text-fg-subtle" aria-hidden />
+                      <span className="text-body">{artifact.original_name}</span>
                     </div>
                   </Td>
-                  <Td className="text-xs uppercase">{artifact.type}</Td>
-                  <Td className="text-xs">{formatBytes(artifact.size_bytes)}</Td>
-                  <Td className="font-mono text-[11px]" title={artifact.sha256}>
+                  <Td className="text-meta uppercase text-fg-muted">{artifact.type}</Td>
+                  <Td className="text-right text-meta tabular-nums text-fg-muted">
+                    {formatBytes(artifact.size_bytes)}
+                  </Td>
+                  <Td className="font-mono text-micro text-fg-muted" title={artifact.sha256}>
                     {shortSha(artifact.sha256)}
                   </Td>
                   <Td className="text-right">
                     <a
                       href={artifact.download_path}
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--app-accent)] hover:underline"
                       download
+                      className={buttonClass({ variant: 'secondary', size: 'sm' })}
                     >
-                      <Download className="size-3.5" /> Baixar
+                      <Download className="size-3.5" aria-hidden /> Baixar
                     </a>
                   </Td>
                 </tr>
@@ -205,7 +212,14 @@ export function BuildDetailPage() {
         )}
       </Card>
 
-      <Card title="Logs em tempo real" bodyClassName="p-4">
+      <Card
+        title="Logs"
+        description={
+          isActive
+            ? 'Saída transmitida em tempo real enquanto a build executa.'
+            : 'Saída completa registrada pelo runner.'
+        }
+      >
         <LogViewer
           buildId={build.id}
           live={isActive}

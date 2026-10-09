@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2 } from 'lucide-react'
-import { Button, Field, Input, Modal, Select, Textarea } from '@/components/ui'
+import { AlertTriangle, Plus, Trash2 } from 'lucide-react'
+import { Button, Field, IconButton, Input, Modal, Select, Textarea } from '@/components/ui'
 import { useToast } from '@/components/toast'
 import { api, apiErrorMessage, type ProfileInput } from '@/lib/api'
 import type { BuildProfile, ProfileParameterDefinition } from '@/lib/types'
@@ -200,146 +200,169 @@ export function ProfileFormModal({
         </>
       }
     >
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Nome" error={errors.name?.message} required>
-            <Input {...register('name')} placeholder="Preview" />
-          </Field>
-          <Field label="Identificador (slug)" error={errors.slug?.message} required>
-            <Input {...register('slug')} placeholder="preview" />
-          </Field>
-        </div>
+      <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+        <section className="flex flex-col gap-3">
+          <h3 className="text-body font-semibold text-fg">Identificação</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Nome" error={errors.name?.message} required>
+              <Input {...register('name')} placeholder="Preview" />
+            </Field>
+            <Field label="Identificador (slug)" error={errors.slug?.message} required>
+              <Input {...register('slug')} placeholder="preview" />
+            </Field>
+          </div>
+        </section>
 
-        <Field
-          label="Script de build (PowerShell)"
-          error={errors.build_script?.message}
-          hint="Executado no Windows dentro do workspace da build. Falhe com exit code != 0. Use $env:APP_DIR, $env:BUILD_COMMIT, etc."
-          required
-        >
-          <Textarea rows={10} {...register('build_script')} spellCheck={false} />
-        </Field>
-
-        <div className="grid gap-4 sm:grid-cols-3">
+        <section className="flex flex-col gap-3 border-t border-line pt-4">
+          <h3 className="text-body font-semibold text-fg">Script</h3>
           <Field
-            label="Diretório de execução"
-            error={errors.working_directory?.message}
-            hint="Vazio = herda do projeto"
+            label="Script de build (PowerShell)"
+            error={errors.build_script?.message}
+            hint="Executado no Windows dentro do workspace da build. Falhe com exit code != 0. Use $env:APP_DIR, $env:BUILD_COMMIT, etc."
+            required
           >
-            <Input {...register('working_directory')} placeholder="apps/mobile" />
+            <Textarea rows={10} {...register('build_script')} spellCheck={false} />
           </Field>
-          <Field label="Timeout (segundos)" error={errors.timeout_seconds?.message} required>
-            <Input type="number" min={30} max={21600} {...register('timeout_seconds', { valueAsNumber: true })} />
-          </Field>
-          <Field label="Perfil ativo">
-            <Select {...register('is_active', { setValueAs: (value) => value === 'true' || value === true })}>
-              <option value="true">Sim</option>
-              <option value="false">Não</option>
-            </Select>
-          </Field>
-        </div>
+        </section>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Padrões de artefatos"
-            hint="Um por linha, relativo ao diretório de execução. Ex.: android/app/build/outputs/apk/release/*.apk"
-            error={errors.artifact_patterns?.message}
-          >
-            <Textarea rows={3} {...register('artifact_patterns')} placeholder="out/*.apk" />
-          </Field>
-          <Field
-            label="Variáveis de ambiente (não sensíveis)"
-            hint="Uma por linha no formato KEY=valor."
-            error={envError ?? undefined}
-          >
-            <Textarea rows={3} {...register('env')} placeholder="APP_VARIANT=production" />
-          </Field>
-        </div>
+        <section className="flex flex-col gap-3 border-t border-line pt-4">
+          <h3 className="text-body font-semibold text-fg">Execução</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              label="Diretório de execução"
+              error={errors.working_directory?.message}
+              hint="Vazio = herda do projeto"
+            >
+              <Input {...register('working_directory')} placeholder="apps/mobile" />
+            </Field>
+            <Field label="Timeout (segundos)" error={errors.timeout_seconds?.message} required>
+              <Input type="number" min={30} max={21600} {...register('timeout_seconds', { valueAsNumber: true })} />
+            </Field>
+          </div>
+          <label className="flex items-center gap-2 text-body text-fg">
+            <input type="checkbox" {...register('is_active')} className="size-3.5 accent-accent" />
+            Perfil ativo
+          </label>
+        </section>
 
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[13px] font-medium">Parâmetros permitidos</p>
-              <p className="text-xs text-[var(--app-fg-subtle)]">
-                Valores que o operador pode informar ao criar uma build. Chegam como $env:BUILD_PARAM_&lt;CHAVE&gt;.
-              </p>
-            </div>
+        <section className="flex flex-col gap-3 border-t border-line pt-4">
+          <h3 className="text-body font-semibold text-fg">Artefatos e ambiente</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              label="Padrões de artefatos"
+              hint="Um por linha, relativo ao diretório de execução. Ex.: android/app/build/outputs/apk/release/*.apk"
+              error={errors.artifact_patterns?.message}
+            >
+              <Textarea rows={3} {...register('artifact_patterns')} placeholder="out/*.apk" />
+            </Field>
+            <Field
+              label="Variáveis de ambiente (não sensíveis)"
+              hint="Uma por linha no formato KEY=valor."
+              error={envError ?? undefined}
+            >
+              <Textarea rows={3} {...register('env')} placeholder="APP_VARIANT=production" />
+            </Field>
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-2 border-t border-line pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-body font-semibold text-fg">Parâmetros permitidos</h3>
             <Button
               type="button"
               variant="secondary"
               size="sm"
               onClick={() => setParameters((current) => [...current, { key: '', uid: parameterUid++ }])}
             >
-              <Plus className="size-3.5" /> Adicionar
+              <Plus className="size-3.5" aria-hidden /> Adicionar
             </Button>
           </div>
+          <p className="text-meta text-fg-subtle">
+            Valores que o operador informa ao criar uma build. Chegam como $env:BUILD_PARAM_&lt;CHAVE&gt;.
+          </p>
 
-          {parameters.map((parameter) => (
-            <div key={parameter.uid} className="grid grid-cols-12 items-end gap-2 rounded-md border border-[var(--app-border)] p-2">
-              <div className="col-span-3">
-                <Field label="Chave">
-                  <Input
-                    value={parameter.key}
-                    onChange={(event) => updateParameter(parameter.uid, { key: event.target.value })}
-                    placeholder="variant"
-                  />
-                </Field>
-              </div>
-              <div className="col-span-3">
-                <Field label="Rótulo">
-                  <Input
-                    value={parameter.label ?? ''}
-                    onChange={(event) => updateParameter(parameter.uid, { label: event.target.value })}
-                    placeholder="Variante"
-                  />
-                </Field>
-              </div>
-              <div className="col-span-2">
-                <Field label="Obrigatório">
-                  <Select
-                    value={parameter.required ? 'true' : 'false'}
-                    onChange={(event) => updateParameter(parameter.uid, { required: event.target.value === 'true' })}
-                  >
-                    <option value="false">Não</option>
-                    <option value="true">Sim</option>
-                  </Select>
-                </Field>
-              </div>
-              <div className="col-span-3">
-                <Field label="Opções / padrão">
-                  <Input
-                    value={(parameter.options ?? []).join(', ') || parameter.default || ''}
-                    onChange={(event) => {
-                      const raw = event.target.value
-                      if (raw.includes(',')) {
-                        updateParameter(parameter.uid, {
-                          options: raw.split(',').map((item) => item.trim()).filter(Boolean),
-                          default: null,
-                        })
-                      } else {
-                        updateParameter(parameter.uid, { default: raw, options: [] })
-                      }
-                    }}
-                    placeholder="preview, production"
-                  />
-                </Field>
-              </div>
-              <div className="col-span-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setParameters((current) => current.filter((item) => item.uid !== parameter.uid))}
-                  aria-label="Remover parâmetro"
+          {parameters.length === 0 ? (
+            <p className="rounded-control bg-inset px-3 py-3 text-center text-meta text-fg-subtle">
+              Nenhum parâmetro configurado.
+            </p>
+          ) : (
+            <div>
+              {parameters.map((parameter) => (
+                <div
+                  key={parameter.uid}
+                  className="grid grid-cols-2 items-end gap-2 border-b border-line py-3 last:border-b-0 sm:grid-cols-12"
                 >
-                  <Trash2 className="size-3.5" />
-                </Button>
-              </div>
+                  <div className="col-span-2 sm:col-span-3">
+                    <Field label="Chave">
+                      <Input
+                        value={parameter.key}
+                        onChange={(event) => updateParameter(parameter.uid, { key: event.target.value })}
+                        placeholder="variant"
+                      />
+                    </Field>
+                  </div>
+                  <div className="col-span-2 sm:col-span-3">
+                    <Field label="Rótulo">
+                      <Input
+                        value={parameter.label ?? ''}
+                        onChange={(event) => updateParameter(parameter.uid, { label: event.target.value })}
+                        placeholder="Variante"
+                      />
+                    </Field>
+                  </div>
+                  <div className="col-span-1 sm:col-span-2">
+                    <Field label="Obrigatório">
+                      <Select
+                        value={parameter.required ? 'true' : 'false'}
+                        onChange={(event) =>
+                          updateParameter(parameter.uid, { required: event.target.value === 'true' })
+                        }
+                      >
+                        <option value="false">Não</option>
+                        <option value="true">Sim</option>
+                      </Select>
+                    </Field>
+                  </div>
+                  <div className="col-span-1 sm:col-span-3">
+                    <Field label="Opções / padrão">
+                      <Input
+                        value={(parameter.options ?? []).join(', ') || parameter.default || ''}
+                        onChange={(event) => {
+                          const raw = event.target.value
+                          if (raw.includes(',')) {
+                            updateParameter(parameter.uid, {
+                              options: raw
+                                .split(',')
+                                .map((item) => item.trim())
+                                .filter(Boolean),
+                              default: null,
+                            })
+                          } else {
+                            updateParameter(parameter.uid, { default: raw, options: [] })
+                          }
+                        }}
+                        placeholder="preview, production"
+                      />
+                    </Field>
+                  </div>
+                  <div className="col-span-2 flex justify-end sm:col-span-1">
+                    <IconButton
+                      label="Remover parâmetro"
+                      tone="danger"
+                      onClick={() => setParameters((current) => current.filter((item) => item.uid !== parameter.uid))}
+                    >
+                      <Trash2 className="size-3.5" aria-hidden />
+                    </IconButton>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </section>
 
         {mutation.isError ? (
-          <p className="rounded-md bg-[var(--app-danger-soft)] px-3 py-2 text-xs text-[var(--app-danger)]">
+          <p className="flex items-start gap-2 rounded-control bg-danger-soft px-3 py-2 text-body text-danger">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
             {apiErrorMessage(mutation.error)}
           </p>
         ) : null}

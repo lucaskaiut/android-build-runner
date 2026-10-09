@@ -1,7 +1,18 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { KeyRound, Plus, Trash2, Upload } from 'lucide-react'
-import { Button, Card, ConfirmDialog, Field, Input, Modal, TableShell, Td, Th } from '@/components/ui'
+import {
+  Button,
+  Card,
+  ConfirmDialog,
+  Field,
+  IconButton,
+  Input,
+  Modal,
+  TableShell,
+  Td,
+  Th,
+} from '@/components/ui'
 import { useToast } from '@/components/toast'
 import { api, apiErrorMessage } from '@/lib/api'
 import { formatBytes, formatRelative } from '@/lib/format'
@@ -92,52 +103,53 @@ export function SecretsPanel({ projectId }: { projectId: number }) {
       title="Segredos do projeto"
       description="Variáveis e arquivos aplicados no workspace antes do script. Os valores são write-only: não podem ser exibidos novamente."
     >
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-6">
         <div>
-          <p className="mb-2 text-[13px] font-medium">Variáveis de ambiente</p>
+          <p className="text-body font-semibold text-fg">Variáveis de ambiente</p>
 
           {secrets.length === 0 ? (
-            <p className="rounded-md border border-dashed border-[var(--app-border)] px-3 py-4 text-center text-xs text-[var(--app-fg-subtle)]">
+            <p className="mt-2 rounded-control bg-inset px-3 py-3 text-center text-meta text-fg-subtle">
               Nenhuma variável configurada. Elas são injetadas no ambiente do script e mascaradas nos logs.
             </p>
           ) : (
-            <TableShell>
-              <thead>
-                <tr>
-                  <Th>Chave</Th>
-                  <Th>Atualizada</Th>
-                  <Th className="w-32 text-right">Ações</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {secrets.map((secret) => (
-                  <tr key={secret.id}>
-                    <Td className="font-mono text-xs">{secret.key}</Td>
-                    <Td className="text-xs text-[var(--app-fg-muted)]">{formatRelative(secret.updated_at)}</Td>
-                    <Td className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setRotateTarget(secret)}
-                          aria-label={`Substituir valor de ${secret.key}`}
-                        >
-                          <KeyRound className="size-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteTarget(secret)}
-                          aria-label={`Remover ${secret.key}`}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </Td>
+            <div className="mt-2 -mx-4">
+              <TableShell>
+                <thead>
+                  <tr>
+                    <Th>Chave</Th>
+                    <Th>Atualizada</Th>
+                    <Th className="w-24 text-right">Ações</Th>
                   </tr>
-                ))}
-              </tbody>
-            </TableShell>
+                </thead>
+                <tbody>
+                  {secrets.map((secret) => (
+                    <tr key={secret.id} className="transition-colors hover:bg-fill-hover/60">
+                      <Td className="font-mono text-meta">{secret.key}</Td>
+                      <Td className="text-meta text-fg-muted">{formatRelative(secret.updated_at)}</Td>
+                      <Td className="text-right">
+                        <div className="flex justify-end gap-0.5">
+                          <IconButton
+                            label={`Substituir valor de ${secret.key}`}
+                            size="sm"
+                            onClick={() => setRotateTarget(secret)}
+                          >
+                            <KeyRound className="size-3.5" aria-hidden />
+                          </IconButton>
+                          <IconButton
+                            label={`Remover ${secret.key}`}
+                            tone="danger"
+                            size="sm"
+                            onClick={() => setDeleteTarget(secret)}
+                          >
+                            <Trash2 className="size-3.5" aria-hidden />
+                          </IconButton>
+                        </div>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </TableShell>
+            </div>
           )}
 
           <div className="mt-3 flex flex-wrap items-end gap-2">
@@ -159,57 +171,60 @@ export function SecretsPanel({ projectId }: { projectId: number }) {
               />
             </Field>
             <Button
-              size="sm"
               disabled={!newKey.trim() || !newValue}
               loading={addSecret.isPending}
               onClick={() => addSecret.mutate()}
             >
-              <Plus className="size-3.5" /> Adicionar
+              <Plus className="size-4" aria-hidden /> Adicionar
             </Button>
           </div>
         </div>
 
-        <div>
-          <p className="mb-2 text-[13px] font-medium">Arquivos secretos</p>
-          <p className="mb-2 text-xs text-[var(--app-fg-subtle)]">
-            Use caminhos como <code className="font-mono">.env</code>, <code className="font-mono">credentials.json</code> ou{' '}
-            <code className="font-mono">credentials/android/keystore.jks</code>. O arquivo é gravado no workspace a cada build.
+        <div className="border-t border-line pt-4">
+          <p className="text-body font-semibold text-fg">Arquivos secretos</p>
+          <p className="mt-1 text-meta text-fg-subtle">
+            Use caminhos como <code>.env</code>, <code>credentials.json</code> ou{' '}
+            <code>credentials/android/keystore.jks</code>. O arquivo é gravado no workspace a cada build.
           </p>
 
           {secretFiles.length === 0 ? (
-            <p className="rounded-md border border-dashed border-[var(--app-border)] px-3 py-4 text-center text-xs text-[var(--app-fg-subtle)]">
+            <p className="mt-2 rounded-control bg-inset px-3 py-3 text-center text-meta text-fg-subtle">
               Nenhum arquivo secreto configurado.
             </p>
           ) : (
-            <TableShell>
-              <thead>
-                <tr>
-                  <Th>Caminho</Th>
-                  <Th>Tamanho</Th>
-                  <Th>Atualizado</Th>
-                  <Th className="w-16 text-right">Ações</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {secretFiles.map((secretFile) => (
-                  <tr key={secretFile.id}>
-                    <Td className="font-mono text-xs break-all">{secretFile.path}</Td>
-                    <Td className="text-xs">{formatBytes(secretFile.size)}</Td>
-                    <Td className="text-xs text-[var(--app-fg-muted)]">{formatRelative(secretFile.updated_at)}</Td>
-                    <Td className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setFileToRemove(secretFile)}
-                        aria-label={`Remover ${secretFile.path}`}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </Td>
+            <div className="mt-2 -mx-4">
+              <TableShell>
+                <thead>
+                  <tr>
+                    <Th>Caminho</Th>
+                    <Th className="text-right">Tamanho</Th>
+                    <Th>Atualizado</Th>
+                    <Th className="w-14 text-right">Ações</Th>
                   </tr>
-                ))}
-              </tbody>
-            </TableShell>
+                </thead>
+                <tbody>
+                  {secretFiles.map((secretFile) => (
+                    <tr key={secretFile.id} className="transition-colors hover:bg-fill-hover/60">
+                      <Td className="font-mono text-meta break-all">{secretFile.path}</Td>
+                      <Td className="text-right text-meta tabular-nums text-fg-muted">
+                        {formatBytes(secretFile.size)}
+                      </Td>
+                      <Td className="text-meta text-fg-muted">{formatRelative(secretFile.updated_at)}</Td>
+                      <Td className="text-right">
+                        <IconButton
+                          label={`Remover ${secretFile.path}`}
+                          tone="danger"
+                          size="sm"
+                          onClick={() => setFileToRemove(secretFile)}
+                        >
+                          <Trash2 className="size-3.5" aria-hidden />
+                        </IconButton>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </TableShell>
+            </div>
           )}
 
           <div className="mt-3 flex flex-wrap items-end gap-2">
@@ -226,16 +241,15 @@ export function SecretsPanel({ projectId }: { projectId: number }) {
                 ref={fileInputRef}
                 type="file"
                 onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-                className="w-full text-xs text-[var(--app-fg-muted)] file:mr-2 file:rounded-md file:border file:border-[var(--app-border-strong)] file:bg-[var(--app-surface-2)] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[var(--app-fg)]"
+                className="h-8 w-full min-w-0 text-meta text-fg-muted file:mr-2 file:h-8 file:cursor-pointer file:rounded-control file:border file:border-line-strong file:bg-surface file:px-3 file:text-meta file:font-medium file:text-fg hover:file:bg-fill-hover"
               />
             </Field>
             <Button
-              size="sm"
               disabled={!filePath.trim() || !file}
               loading={uploadFile.isPending}
               onClick={() => uploadFile.mutate()}
             >
-              <Upload className="size-3.5" /> Enviar
+              <Upload className="size-4" aria-hidden /> Enviar
             </Button>
           </div>
         </div>
@@ -269,7 +283,7 @@ export function SecretsPanel({ projectId }: { projectId: number }) {
           </>
         }
       >
-        <p className="text-xs text-[var(--app-fg-muted)]">
+        <p className="text-meta text-fg-muted">
           O valor atual não pode ser exibido. Informe o novo valor — ele será usado na próxima build.
         </p>
         <div className="mt-3">

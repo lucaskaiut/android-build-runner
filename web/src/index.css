@@ -1,61 +1,144 @@
 @import 'tailwindcss';
 
-:root {
-  --app-bg: #f6f7f9;
-  --app-surface: #ffffff;
-  --app-surface-2: #f0f1f4;
-  --app-surface-3: #e4e6ea;
-  --app-fg: #17181c;
-  --app-fg-muted: #5f6470;
-  --app-fg-subtle: #8b909c;
-  --app-border: #dfe2e8;
-  --app-border-strong: #c9cdd6;
-  --app-primary: #3f3f46;
-  --app-primary-hover: #27272a;
-  --app-primary-fg: #ffffff;
-  --app-accent: #4f46e5;
-  --app-accent-soft: #eef2ff;
-  --app-danger: #dc2626;
-  --app-danger-soft: #fef2f2;
-  --app-success: #047857;
-  --app-success-soft: #ecfdf5;
-  --app-warning: #b45309;
-  --app-warning-soft: #fffbeb;
-  --app-info: #1d4ed8;
-  --app-info-soft: #eff6ff;
-  --app-ring: rgb(79 70 229 / 0.4);
+/*
+ * Design tokens — single source of truth for the panel visual language.
+ * See DESIGN_SYSTEM.md for usage rules and anti-patterns.
+ */
+@theme {
+  /* Tipo */
+  --font-sans:
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-mono:
+    'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono',
+    monospace;
+
+  /* Escala tipográfica (densa, própria de ferramenta operacional) */
+  --text-micro: 0.6875rem; /* 11px — badges, metadados de coluna */
+  --text-meta: 0.75rem; /* 12px — labels, ajuda, timestamps */
+  --text-body: 0.8125rem; /* 13px — corpo denso, tabelas */
+  --text-copy: 0.875rem; /* 14px — corpo padrão */
+  --text-title: 1.0625rem; /* 17px — título de página */
+
+  /* Superfícies (hierarquia por contraste, não por borda) */
+  --color-canvas: #edeff1;
+  --color-panel: #fbfbfc;
+  --color-surface: #ffffff;
+  --color-inset: #f4f6f7;
+  --color-fill-hover: #eef1f3;
+
+  /* Texto */
+  --color-fg: #191c1f;
+  --color-fg-muted: #4e555e;
+  --color-fg-subtle: #626b78;
+
+  /* Limites funcionais (linhas de tabela, inputs, divisores) */
+  --color-line: #e4e8ea;
+  --color-line-strong: #ccd3d8;
+
+  /* Tinta — ações primárias */
+  --color-ink: #23272c;
+  --color-ink-hover: #14171a;
+
+  /* Destaque — interação, seleção, foco, atividade */
+  --color-accent: #0f766e;
+  --color-accent-hover: #115e59;
+  --color-accent-soft: #e7f5f2;
+
+  /* Estados semânticos */
+  --color-success: #15803d;
+  --color-success-soft: #edfaf1;
+  --color-danger: #b91c1c;
+  --color-danger-hover: #991b1b;
+  --color-danger-soft: #fdf0f0;
+  --color-warning: #b45309;
+  --color-warning-soft: #fdf7ea;
+  --color-info: #1d4ed8;
+  --color-info-soft: #eef4fe;
+
+  /* Terminal de logs (escuro, mas sem estética "hacker") */
+  --color-terminal: #101418;
+  --color-terminal-fg: #c9cfd8;
+  --color-terminal-muted: #98a1af;
+  --color-terminal-stderr: #fca5a5;
+  --color-terminal-system: #7dd3fc;
+
+  /* Raios — escala curta e deliberada */
+  --radius-control: 6px;
+  --radius-surface: 8px;
+  --radius-overlay: 10px;
+
+  /* Elevação — poucos níveis */
+  --shadow-card: 0 1px 2px rgb(16 20 26 / 0.05), 0 2px 6px -1px rgb(16 20 26 / 0.05);
+  --shadow-overlay: 0 4px 12px -2px rgb(16 20 26 / 0.12), 0 16px 40px -8px rgb(16 20 26 / 0.2);
 }
 
-html,
-body,
-#root {
-  height: 100%;
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-canvas);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-copy);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+  }
+
+  /* A última linha de uma tabela não precisa de divisor: o rodapé já delimita. */
+  tbody tr:last-child > td {
+    border-bottom-color: transparent;
+  }
+
+  ::selection {
+    background: #cdeae4;
+    color: var(--color-fg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
-body {
-  margin: 0;
-  background: var(--app-bg);
-  color: var(--app-fg);
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    Arial,
-    sans-serif;
-  font-size: 14px;
-  line-height: 1.45;
-  -webkit-font-smoothing: antialiased;
-}
+@layer components {
+  /* Foco visível padronizado para todo elemento interativo. */
+  .focus-ring {
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent/70;
+  }
 
-code,
-pre,
-.font-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
-}
+  /* Entrada discreta de toasts; desativada por prefers-reduced-motion. */
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
-::selection {
-  background: var(--app-accent-soft);
+  .animate-toast-in {
+    animation: toast-in 140ms ease-out;
+  }
 }

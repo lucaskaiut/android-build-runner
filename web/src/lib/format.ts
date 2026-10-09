@@ -66,7 +66,3 @@ export function shortSha(sha: string | null | undefined): string {
   if (!sha) return '—'
   return sha.slice(0, 12)
 }
-
-export function classNames(...values: Array<string | false | null | undefined>): string {
-  return values.filter(Boolean).join(' ')
-}

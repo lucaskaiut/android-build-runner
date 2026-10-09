@@ -1,7 +1,21 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy, KeyRound, Plus, RefreshCw, Trash2 } from 'lucide-react'
-import { Button, Card, ConfirmDialog, EmptyState, Field, Input, LoadingBlock, Modal, Select, TableShell, Td, Th } from '@/components/ui'
+import {
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  Field,
+  IconButton,
+  Input,
+  LoadingBlock,
+  Modal,
+  Select,
+  TableShell,
+  Td,
+  Th,
+} from '@/components/ui'
 import { WebhookStatusBadge } from '@/components/StatusBadge'
 import { useToast } from '@/components/toast'
 import { api, apiErrorMessage } from '@/lib/api'
@@ -92,13 +106,13 @@ export function WebhookPanel({
 
   return (
     <Card
-      title="Integração com GitHub"
+      title="Automação do GitHub"
       description="Executa builds automaticamente em push de branches monitoradas."
       actions={
-        <label className="flex items-center gap-2 text-xs text-[var(--app-fg-muted)]">
+        <label className="flex items-center gap-2 text-meta text-fg-muted">
           <input
             type="checkbox"
-            className="size-4 accent-[var(--app-primary)]"
+            className="size-3.5 accent-accent"
             checked={project.webhook_enabled}
             disabled={toggleAutomation.isPending}
             onChange={(event) => toggleAutomation.mutate(event.target.checked)}
@@ -107,79 +121,87 @@ export function WebhookPanel({
         </label>
       }
     >
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-md border border-[var(--app-border)] bg-[var(--app-surface-2)] p-3">
-            <p className="text-[11px] font-medium tracking-wide text-[var(--app-fg-subtle)] uppercase">Payload URL</p>
-            <div className="mt-1 flex items-center gap-2">
-              <code className="min-w-0 flex-1 truncate text-xs">{webhookUrl}</code>
-              <Button variant="ghost" size="sm" onClick={() => copy(webhookUrl, 'URL')}>
-                <Copy className="size-3.5" />
-              </Button>
+          <div className="min-w-0 rounded-control bg-inset px-3 py-2.5">
+            <p className="text-meta text-fg-subtle">Payload URL</p>
+            <div className="mt-1 flex items-center gap-1.5">
+              <code className="min-w-0 flex-1 truncate text-meta text-fg" title={webhookUrl}>
+                {webhookUrl}
+              </code>
+              <IconButton label="Copiar Payload URL" size="sm" onClick={() => copy(webhookUrl, 'URL')}>
+                <Copy className="size-3.5" aria-hidden />
+              </IconButton>
             </div>
           </div>
-          <div className="rounded-md border border-[var(--app-border)] bg-[var(--app-surface-2)] p-3">
-            <p className="text-[11px] font-medium tracking-wide text-[var(--app-fg-subtle)] uppercase">Segredo</p>
+          <div className="min-w-0 rounded-control bg-inset px-3 py-2.5">
+            <p className="text-meta text-fg-subtle">Segredo</p>
             <div className="mt-1 flex items-center justify-between gap-2">
-              <span className="text-xs text-[var(--app-fg-muted)]">
+              <span className="min-w-0 truncate text-meta text-fg-muted">
                 {project.webhook_secret_configured ? 'Configurado (não exibível)' : 'Não configurado'}
               </span>
               <Button variant="secondary" size="sm" onClick={() => setConfirmRotate(true)}>
-                <KeyRound className="size-3.5" /> {project.webhook_secret_configured ? 'Gerar novo' : 'Gerar segredo'}
+                <KeyRound className="size-3.5" aria-hidden />
+                {project.webhook_secret_configured ? 'Gerar novo' : 'Gerar segredo'}
               </Button>
             </div>
           </div>
         </div>
 
-        <div className="text-xs text-[var(--app-fg-muted)]">
-          <p className="font-medium text-[var(--app-fg)]">Como configurar no GitHub</p>
-          <ol className="mt-1 list-inside list-decimal space-y-0.5">
+        <div className="text-meta text-fg-muted">
+          <p className="text-body font-semibold text-fg">Como configurar no GitHub</p>
+          <ol className="mt-1.5 list-inside list-decimal space-y-0.5">
             <li>No repositório, abra Settings → Webhooks → Add webhook.</li>
             <li>Cole a Payload URL acima e escolha Content type: application/json.</li>
-            <li>Cole o segredo gerado aqui no campo Secret e selecione o evento "Just the push event".</li>
+            <li>Cole o segredo gerado aqui no campo Secret e selecione "Just the push event".</li>
             <li>Adicione abaixo as branches monitoradas e o perfil que será executado.</li>
           </ol>
         </div>
 
-        <div>
-          <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
-            <p className="text-[13px] font-medium">Branches monitoradas</p>
-          </div>
+        <div className="border-t border-line pt-4">
+          <p className="text-body font-semibold text-fg">Branches monitoradas</p>
 
           {branchTriggers.length === 0 ? (
-            <p className="rounded-md border border-dashed border-[var(--app-border)] px-3 py-4 text-center text-xs text-[var(--app-fg-subtle)]">
+            <p className="mt-2 rounded-control bg-inset px-3 py-3 text-center text-meta text-fg-subtle">
               Nenhuma branch monitorada. Builds automáticas só acontecem após configurar um gatilho.
             </p>
           ) : (
-            <TableShell>
-              <thead>
-                <tr>
-                  <Th>Padrão de branch</Th>
-                  <Th>Perfil</Th>
-                  <Th>Estado</Th>
-                  <Th className="w-16" />
-                </tr>
-              </thead>
-              <tbody>
-                {branchTriggers.map((trigger) => (
-                  <tr key={trigger.id}>
-                    <Td className="font-mono text-xs">{trigger.branch_pattern}</Td>
-                    <Td className="text-sm">
-                      {trigger.profile?.name ?? '—'}{' '}
-                      {trigger.profile && !trigger.profile.is_active ? (
-                        <span className="text-[11px] text-[var(--app-danger)]">(inativo)</span>
-                      ) : null}
-                    </Td>
-                    <Td className="text-xs">{trigger.is_active ? 'Ativo' : 'Inativo'}</Td>
-                    <Td>
-                      <Button variant="ghost" size="sm" onClick={() => setTriggerToRemove(trigger)} aria-label="Remover gatilho">
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </Td>
+            <div className="mt-2 -mx-4">
+              <TableShell>
+                <thead>
+                  <tr>
+                    <Th>Padrão de branch</Th>
+                    <Th>Perfil</Th>
+                    <Th>Estado</Th>
+                    <Th className="w-14" />
                   </tr>
-                ))}
-              </tbody>
-            </TableShell>
+                </thead>
+                <tbody>
+                  {branchTriggers.map((trigger) => (
+                    <tr key={trigger.id} className="transition-colors hover:bg-fill-hover/60">
+                      <Td className="font-mono text-meta">{trigger.branch_pattern}</Td>
+                      <Td className="text-body">
+                        {trigger.profile?.name ?? '—'}{' '}
+                        {trigger.profile && !trigger.profile.is_active ? (
+                          <span className="text-meta text-danger">(inativo)</span>
+                        ) : null}
+                      </Td>
+                      <Td className="text-meta text-fg-muted">{trigger.is_active ? 'Ativo' : 'Inativo'}</Td>
+                      <Td className="text-right">
+                        <IconButton
+                          label="Remover gatilho"
+                          tone="danger"
+                          size="sm"
+                          onClick={() => setTriggerToRemove(trigger)}
+                        >
+                          <Trash2 className="size-3.5" aria-hidden />
+                        </IconButton>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </TableShell>
+            </div>
           )}
 
           <div className="mt-3 flex flex-wrap items-end gap-2">
@@ -203,55 +225,68 @@ export function WebhookPanel({
               </Select>
             </Field>
             <Button
-              size="sm"
               disabled={!newPattern.trim() || !newProfileId}
               loading={addTrigger.isPending}
               onClick={() => addTrigger.mutate()}
             >
-              <Plus className="size-3.5" /> Adicionar
+              <Plus className="size-4" aria-hidden /> Adicionar
             </Button>
           </div>
         </div>
 
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-[13px] font-medium">Entregas recentes</p>
-            <Button variant="ghost" size="sm" onClick={() => deliveries.refetch()} loading={deliveries.isFetching}>
-              <RefreshCw className="size-3.5" /> Atualizar
-            </Button>
+        <div className="border-t border-line pt-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-body font-semibold text-fg">Entregas recentes</p>
+            <IconButton
+              label="Atualizar entregas"
+              size="sm"
+              onClick={() => deliveries.refetch()}
+              disabled={deliveries.isFetching}
+            >
+              <RefreshCw className="size-3.5" aria-hidden />
+            </IconButton>
           </div>
 
           {deliveries.isLoading ? (
             <LoadingBlock label="Carregando entregas…" />
           ) : (deliveries.data?.data.length ?? 0) === 0 ? (
-            <EmptyState title="Nenhum evento recebido" description="Os eventos do GitHub aparecerão aqui." />
+            <EmptyState title="Nenhum evento recebido" description="Os eventos do GitHub aparecem aqui." />
           ) : (
-            <TableShell>
-              <thead>
-                <tr>
-                  <Th>Resultado</Th>
-                  <Th>Referência</Th>
-                  <Th>Commit</Th>
-                  <Th>Mensagem</Th>
-                  <Th>Quando</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {(deliveries.data?.data ?? []).map((delivery) => (
-                  <tr key={delivery.id}>
-                    <Td>
-                      <WebhookStatusBadge status={delivery.status} label={delivery.status_label} />
-                    </Td>
-                    <Td className="font-mono text-xs">{delivery.ref?.replace('refs/heads/', '') ?? '—'}</Td>
-                    <Td className="font-mono text-xs">{shortSha(delivery.sha)}</Td>
-                    <Td className="max-w-64 truncate text-xs text-[var(--app-fg-muted)]" title={delivery.message ?? ''}>
-                      {delivery.message ?? '—'}
-                    </Td>
-                    <Td className="text-xs text-[var(--app-fg-muted)]">{formatRelative(delivery.created_at)}</Td>
+            <div className="mt-2 -mx-4">
+              <TableShell>
+                <thead>
+                  <tr>
+                    <Th>Resultado</Th>
+                    <Th>Referência</Th>
+                    <Th>Commit</Th>
+                    <Th>Mensagem</Th>
+                    <Th className="text-right">Quando</Th>
                   </tr>
-                ))}
-              </tbody>
-            </TableShell>
+                </thead>
+                <tbody>
+                  {(deliveries.data?.data ?? []).map((delivery) => (
+                    <tr key={delivery.id} className="transition-colors hover:bg-fill-hover/60">
+                      <Td>
+                        <WebhookStatusBadge status={delivery.status} label={delivery.status_label} />
+                      </Td>
+                      <Td className="font-mono text-meta">
+                        {delivery.ref?.replace('refs/heads/', '') ?? '—'}
+                      </Td>
+                      <Td className="font-mono text-meta">{shortSha(delivery.sha)}</Td>
+                      <Td
+                        className="max-w-64 truncate text-meta text-fg-muted"
+                        title={delivery.message ?? ''}
+                      >
+                        {delivery.message ?? '—'}
+                      </Td>
+                      <Td className="text-right text-meta whitespace-nowrap text-fg-muted">
+                        {formatRelative(delivery.created_at)}
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </TableShell>
+            </div>
           )}
         </div>
       </div>
@@ -288,13 +323,14 @@ export function WebhookPanel({
           </Button>
         }
       >
-        <p className="text-xs text-[var(--app-fg-muted)]">
-          Copie agora — este segredo não será exibido novamente. Cole-o no GitHub em Settings → Webhooks, campo "Secret".
+        <p className="text-meta text-fg-muted">
+          Copie agora — este segredo não será exibido novamente. Cole-o no GitHub em Settings → Webhooks,
+          campo "Secret".
         </p>
-        <div className="mt-3 flex items-center gap-2 rounded-md border border-[var(--app-border)] bg-[var(--app-surface-2)] p-2">
-          <code className="min-w-0 flex-1 break-all text-xs">{secretModal}</code>
+        <div className="mt-3 flex items-center gap-2 rounded-control bg-inset p-2">
+          <code className="min-w-0 flex-1 break-all text-meta">{secretModal}</code>
           <Button variant="secondary" size="sm" onClick={() => secretModal && copy(secretModal, 'Segredo')}>
-            <Copy className="size-3.5" /> Copiar
+            <Copy className="size-3.5" aria-hidden /> Copiar
           </Button>
         </div>
       </Modal>

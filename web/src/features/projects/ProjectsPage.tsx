@@ -3,7 +3,21 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { Plus, Search } from 'lucide-react'
 import { BuildStatusBadge } from '@/components/StatusBadge'
-import { Badge, ButtonLink, Card, EmptyState, ErrorState, Input, LoadingBlock, Pagination, Select, TableShell, Td, Th } from '@/components/ui'
+import {
+  ButtonLink,
+  Card,
+  EmptyState,
+  ErrorState,
+  Input,
+  LoadingBlock,
+  PageHeader,
+  Pagination,
+  Select,
+  StatusText,
+  TableShell,
+  Td,
+  Th,
+} from '@/components/ui'
 import { api, apiErrorMessage } from '@/lib/api'
 import { formatRelative } from '@/lib/format'
 
@@ -24,22 +38,26 @@ export function ProjectsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold">Projetos</h1>
-          <p className="text-xs text-[var(--app-fg-subtle)]">Repositórios Git disponíveis para build.</p>
-        </div>
-        <ButtonLink to="/projects/new" size="sm">
-          <Plus className="size-3.5" /> Novo projeto
-        </ButtonLink>
-      </div>
+      <PageHeader
+        title="Projetos"
+        description="Repositórios Git disponíveis para executar builds."
+        actions={
+          <ButtonLink to="/projects/new">
+            <Plus className="size-4" aria-hidden /> Novo projeto
+          </ButtonLink>
+        }
+      />
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="relative min-w-56 flex-1">
-          <Search className="absolute top-2.5 left-2.5 size-4 text-[var(--app-fg-subtle)]" />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-64 max-w-md flex-1">
+          <Search
+            className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-fg-subtle"
+            aria-hidden
+          />
           <Input
             className="pl-8"
             placeholder="Buscar por nome, identificador ou repositório"
+            aria-label="Buscar projetos"
             value={search}
             onChange={(event) => {
               setSearch(event.target.value)
@@ -49,6 +67,7 @@ export function ProjectsPage() {
         </div>
         <Select
           className="w-40"
+          aria-label="Filtrar por estado"
           value={activeFilter}
           onChange={(event) => {
             setActiveFilter(event.target.value)
@@ -70,7 +89,11 @@ export function ProjectsPage() {
           <EmptyState
             title="Nenhum projeto encontrado"
             description="Cadastre um repositório para começar a executar builds."
-            action={<ButtonLink to="/projects/new" size="sm">Cadastrar projeto</ButtonLink>}
+            action={
+              <ButtonLink to="/projects/new" size="sm">
+                Cadastrar projeto
+              </ButtonLink>
+            }
           />
         ) : (
           <>
@@ -80,48 +103,65 @@ export function ProjectsPage() {
                   <Th>Projeto</Th>
                   <Th>Repositório</Th>
                   <Th>Branch padrão</Th>
-                  <Th className="text-center">Perfis</Th>
+                  <Th className="text-right">Perfis</Th>
                   <Th>Última build</Th>
                   <Th>Estado</Th>
                 </tr>
               </thead>
               <tbody>
                 {(data?.data ?? []).map((project) => (
-                  <tr key={project.id} className="hover:bg-[var(--app-surface-2)]">
+                  <tr key={project.id} className="transition-colors hover:bg-fill-hover/60">
                     <Td>
-                      <Link to={`/projects/${project.id}`} className="text-sm font-medium hover:underline">
+                      <Link
+                        to={`/projects/${project.id}`}
+                        className="focus-ring rounded-sm text-body font-medium text-fg hover:underline"
+                      >
                         {project.name}
                       </Link>
-                      <p className="font-mono text-[11px] text-[var(--app-fg-subtle)]">{project.slug}</p>
+                      <p className="font-mono text-micro text-fg-subtle">{project.slug}</p>
                     </Td>
                     <Td>
-                      <span className="font-mono text-xs break-all">{project.repo_url}</span>
+                      <span
+                        className="block max-w-[280px] truncate font-mono text-meta text-fg-muted"
+                        title={project.repo_url}
+                      >
+                        {project.repo_url}
+                      </span>
                     </Td>
-                    <Td className="font-mono text-xs">{project.default_branch}</Td>
-                    <Td className="text-center text-sm">{project.profiles_count ?? 0}</Td>
+                    <Td className="font-mono text-meta text-fg-muted">{project.default_branch}</Td>
+                    <Td className="text-right text-body tabular-nums text-fg-muted">
+                      {project.profiles_count ?? 0}
+                    </Td>
                     <Td>
                       {project.last_build ? (
                         <div className="flex items-center gap-2">
-                          <BuildStatusBadge status={project.last_build.status} label={project.last_build.status_label} />
+                          <BuildStatusBadge
+                            status={project.last_build.status}
+                            label={project.last_build.status_label}
+                          />
                           <Link
                             to={`/builds/${project.last_build.id}`}
-                            className="font-mono text-[11px] text-[var(--app-accent)] hover:underline"
+                            className="focus-ring rounded-sm font-mono text-micro text-fg-subtle hover:text-accent hover:underline"
                           >
                             #{project.last_build.id} · {formatRelative(project.last_build.created_at)}
                           </Link>
                         </div>
                       ) : (
-                        <span className="text-xs text-[var(--app-fg-subtle)]">Nenhuma</span>
+                        <span className="text-meta text-fg-subtle">Nenhuma</span>
                       )}
                     </Td>
                     <Td>
-                      {project.is_active ? <Badge tone="success">Ativo</Badge> : <Badge>Inativo</Badge>}
+                      {project.is_active ? (
+                        <StatusText tone="success">Ativo</StatusText>
+                      ) : (
+                        <StatusText>Inativo</StatusText>
+                      )}
                     </Td>
                   </tr>
                 ))}
               </tbody>
             </TableShell>
-            <div className="border-t border-[var(--app-border)] px-3 py-2">
+            <div className="border-t border-line px-3 py-2">
               <Pagination
                 page={page}
                 lastPage={data?.last_page ?? 1}
@@ -129,7 +169,7 @@ export function ProjectsPage() {
                 onChange={setPage}
               />
             </div>
-            {isFetching ? <p className="px-3 pb-2 text-[11px] text-[var(--app-fg-subtle)]">Atualizando…</p> : null}
+            {isFetching ? <p className="px-3 pb-2 text-micro text-fg-subtle">Atualizando…</p> : null}
           </>
         )}
       </Card>

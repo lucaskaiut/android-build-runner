@@ -1,8 +1,21 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link, useSearchParams } from 'react-router'
+import { useSearchParams } from 'react-router'
+import { X } from 'lucide-react'
 import { BuildsTable } from './BuildsTable'
-import { ButtonLink, Card, EmptyState, ErrorState, Field, Input, LoadingBlock, Pagination, Select } from '@/components/ui'
+import {
+  Button,
+  ButtonLink,
+  Card,
+  EmptyState,
+  ErrorState,
+  Field,
+  Input,
+  LoadingBlock,
+  PageHeader,
+  Pagination,
+  Select,
+} from '@/components/ui'
 import { api, apiErrorMessage } from '@/lib/api'
 
 const statusOptions = [
@@ -31,12 +44,18 @@ export function BuildsPage() {
   const source = searchParams.get('source') ?? ''
   const branch = searchParams.get('branch') ?? ''
   const sha = searchParams.get('sha') ?? ''
+  const hasFilters = Boolean(projectId || status || source || branch || sha)
 
   const setFilter = (key: string, value: string) => {
     const next = new URLSearchParams(searchParams)
     if (value) next.set(key, value)
     else next.delete(key)
     setSearchParams(next, { replace: true })
+    setPage(1)
+  }
+
+  const clearFilters = () => {
+    setSearchParams(new URLSearchParams(), { replace: true })
     setPage(1)
   }
 
@@ -61,15 +80,11 @@ export function BuildsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold">Builds</h1>
-          <p className="text-xs text-[var(--app-fg-subtle)]">Histórico de execuções com filtros.</p>
-        </div>
-        <ButtonLink to="/builds/new" size="sm">
-          Nova build
-        </ButtonLink>
-      </div>
+      <PageHeader
+        title="Builds"
+        description="Histórico de execuções, com filtros por projeto, estado, origem e commit."
+        actions={<ButtonLink to="/builds/new">Nova build</ButtonLink>}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Field label="Projeto">
@@ -101,12 +116,28 @@ export function BuildsPage() {
           </Select>
         </Field>
         <Field label="Branch">
-          <Input value={branch} onChange={(event) => setFilter('branch', event.target.value)} placeholder="main" />
+          <Input
+            value={branch}
+            onChange={(event) => setFilter('branch', event.target.value)}
+            placeholder="main"
+          />
         </Field>
         <Field label="Commit (SHA)">
-          <Input value={sha} onChange={(event) => setFilter('sha', event.target.value)} placeholder="abc123" />
+          <Input
+            value={sha}
+            onChange={(event) => setFilter('sha', event.target.value)}
+            placeholder="7fd1a60b"
+          />
         </Field>
       </div>
+
+      {hasFilters ? (
+        <div>
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            <X className="size-3.5" aria-hidden /> Limpar filtros
+          </Button>
+        </div>
+      ) : null}
 
       <Card bodyClassName="p-0">
         {buildsQuery.isLoading ? (
@@ -116,13 +147,17 @@ export function BuildsPage() {
         ) : (buildsQuery.data?.data.length ?? 0) === 0 ? (
           <EmptyState
             title="Nenhuma build encontrada"
-            description="Ajuste os filtros ou crie uma nova build."
-            action={<ButtonLink to="/builds/new" size="sm">Nova build</ButtonLink>}
+            description="Ajuste os filtros ou execute uma nova build."
+            action={
+              <ButtonLink to="/builds/new" size="sm">
+                Nova build
+              </ButtonLink>
+            }
           />
         ) : (
           <>
             <BuildsTable builds={buildsQuery.data?.data ?? []} />
-            <div className="border-t border-[var(--app-border)] px-3 py-2">
+            <div className="border-t border-line px-3 py-2">
               <Pagination
                 page={page}
                 lastPage={buildsQuery.data?.last_page ?? 1}
@@ -133,10 +168,6 @@ export function BuildsPage() {
           </>
         )}
       </Card>
-
-      <p className="text-[11px] text-[var(--app-fg-subtle)]">
-        Dica: <Link to="/builds?status=failed" className="text-[var(--app-accent)] hover:underline">ver somente falhas</Link>.
-      </p>
     </div>
   )
 }

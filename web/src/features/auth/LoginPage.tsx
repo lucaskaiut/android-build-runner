@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router'
-import { HardDriveDownload } from 'lucide-react'
+import { AlertTriangle, HardDriveDownload } from 'lucide-react'
 import { Button, Field, Input } from '@/components/ui'
 import { apiErrorMessage } from '@/lib/api'
 import { useLogin } from './useAuth'
@@ -37,42 +37,46 @@ export function LoginPage() {
   })
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--app-bg)] px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-[var(--app-primary)] text-white">
-            <HardDriveDownload className="size-5" />
+    <div className="flex min-h-screen items-center justify-center bg-canvas px-4 py-10">
+      <div className="w-full max-w-[360px]">
+        <div className="mb-6 flex items-center gap-2.5">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-control bg-ink text-white">
+            <HardDriveDownload className="size-4" aria-hidden />
+          </span>
+          <div className="leading-tight">
+            <p className="text-copy font-semibold text-fg">Local Build Platform</p>
+            <p className="text-meta text-fg-subtle">Builds Expo / React Native em runner local</p>
           </div>
-          <h1 className="text-lg font-semibold">Local Build Platform</h1>
-          <p className="text-xs text-[var(--app-fg-muted)]">Entre para gerenciar projetos e builds.</p>
         </div>
 
-        <form
-          onSubmit={onSubmit}
-          className="flex flex-col gap-4 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] p-5 shadow-sm"
-          noValidate
-        >
-          <Field label="E-mail" error={errors.email?.message} required>
-            <Input type="email" autoComplete="username" autoFocus {...register('email')} />
-          </Field>
+        <form onSubmit={onSubmit} className="rounded-surface bg-surface p-5 shadow-card" noValidate>
+          <h1 className="text-copy font-semibold text-fg">Entrar</h1>
+          <p className="mt-0.5 text-meta text-fg-subtle">Acesso restrito à equipe.</p>
 
-          <Field label="Senha" error={errors.password?.message} required>
-            <Input type="password" autoComplete="current-password" {...register('password')} />
-          </Field>
+          <div className="mt-4 flex flex-col gap-3.5">
+            <Field label="E-mail" error={errors.email?.message} required>
+              <Input type="email" autoComplete="username" autoFocus {...register('email')} />
+            </Field>
 
-          {login.isError ? (
-            <p className="rounded-md bg-[var(--app-danger-soft)] px-3 py-2 text-xs text-[var(--app-danger)]">
-              {apiErrorMessage(login.error)}
-            </p>
-          ) : null}
+            <Field label="Senha" error={errors.password?.message} required>
+              <Input type="password" autoComplete="current-password" {...register('password')} />
+            </Field>
 
-          <Button type="submit" loading={login.isPending}>
-            Entrar
-          </Button>
+            {login.isError ? (
+              <p className="flex items-start gap-2 rounded-control bg-danger-soft px-3 py-2 text-body text-danger">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {apiErrorMessage(login.error)}
+              </p>
+            ) : null}
+
+            <Button type="submit" loading={login.isPending} className="mt-1 w-full">
+              Entrar
+            </Button>
+          </div>
         </form>
 
-        <p className="mt-4 text-center text-[11px] text-[var(--app-fg-subtle)]">
-          Acesso restrito. Sessões expiradas exigem novo login.
+        <p className="mt-4 text-center text-micro text-fg-subtle">
+          Sessões expiradas exigem novo login.
         </p>
       </div>
     </div>

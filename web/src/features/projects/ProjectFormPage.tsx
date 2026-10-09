@@ -3,9 +3,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useParams } from 'react-router'
-import { ArrowLeft } from 'lucide-react'
-import { Button, Card, ErrorState, Field, Input, LoadingBlock, Textarea } from '@/components/ui'
+import { Link, useNavigate, useParams } from 'react-router'
+import { AlertTriangle } from 'lucide-react'
+import { Button, Card, ErrorState, Field, Input, LoadingBlock, PageHeader, Textarea } from '@/components/ui'
 import { useToast } from '@/components/toast'
 import { api, apiErrorMessage, ApiError, type ProjectInput } from '@/lib/api'
 
@@ -136,71 +136,92 @@ export function ProjectFormPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4">
-      <div>
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="-ml-2 mb-1">
-          <ArrowLeft className="size-3.5" /> Voltar
-        </Button>
-        <h1 className="text-lg font-semibold">{isEdit ? 'Editar projeto' : 'Novo projeto'}</h1>
-        <p className="text-xs text-[var(--app-fg-subtle)]">
-          O runner fará checkout do repositório via SSH ou HTTPS usando as credenciais da máquina Windows.
-        </p>
-      </div>
+    <div className="mx-auto flex max-w-2xl flex-col gap-5">
+      <PageHeader
+        breadcrumb={
+          <>
+            <Link to="/projects" className="focus-ring rounded-sm hover:text-fg">
+              Projetos
+            </Link>
+            <span aria-hidden>/</span>
+            <span className="text-fg-muted">{isEdit ? 'Editar' : 'Novo'}</span>
+          </>
+        }
+        title={isEdit ? 'Editar projeto' : 'Novo projeto'}
+        description="O runner faz checkout do repositório via SSH ou HTTPS com as credenciais da máquina Windows."
+      />
 
       <Card>
-        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Nome" error={fieldError('name')} required>
-              <Input {...register('name')} placeholder="App Mobile" />
-            </Field>
-            <Field label="Identificador (slug)" error={fieldError('slug')} required>
-              <Input {...register('slug')} placeholder="app-mobile" />
-            </Field>
-          </div>
+        <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+          <section className="flex flex-col gap-3">
+            <h3 className="text-body font-semibold text-fg">Identificação</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Nome" error={fieldError('name')} required>
+                <Input {...register('name')} placeholder="App Mobile" />
+              </Field>
+              <Field
+                label="Identificador (slug)"
+                error={fieldError('slug')}
+                hint="Usado em URLs e nomes de workspace."
+                required
+              >
+                <Input {...register('slug')} placeholder="app-mobile" />
+              </Field>
+            </div>
+          </section>
 
-          <Field
-            label="URL do repositório Git"
-            error={fieldError('repo_url')}
-            hint="Exemplos: git@github.com:org/repo.git ou https://github.com/org/repo.git"
-            required
-          >
-            <Input {...register('repo_url')} placeholder="git@github.com:org/repo.git" />
-          </Field>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Branch padrão" error={fieldError('default_branch')} required>
-              <Input {...register('default_branch')} placeholder="main" />
-            </Field>
+          <section className="flex flex-col gap-3 border-t border-line pt-4">
+            <h3 className="text-body font-semibold text-fg">Repositório</h3>
             <Field
-              label="Diretório de execução"
-              error={fieldError('working_directory')}
-              hint="Relativo à raiz do repositório. Use . para a raiz."
+              label="URL do repositório Git"
+              error={fieldError('repo_url')}
+              hint="Exemplos: git@github.com:org/repo.git ou https://github.com/org/repo.git"
               required
             >
-              <Input {...register('working_directory')} placeholder="apps/mobile" />
+              <Input {...register('repo_url')} placeholder="git@github.com:org/repo.git" />
             </Field>
-          </div>
 
-          <Field
-            label="Branches permitidas (opcional)"
-            error={fieldError('allowed_branches')}
-            hint="Uma por linha. Aceita padrões simples, ex.: release/*. Vazio = qualquer branch."
-          >
-            <Textarea rows={3} {...register('allowed_branches')} placeholder={'main\nrelease/*'} />
-          </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Branch padrão" error={fieldError('default_branch')} required>
+                <Input {...register('default_branch')} placeholder="main" />
+              </Field>
+              <Field
+                label="Diretório de execução"
+                error={fieldError('working_directory')}
+                hint="Relativo à raiz do repositório. Use . para a raiz."
+                required
+              >
+                <Input {...register('working_directory')} placeholder="apps/mobile" />
+              </Field>
+            </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" {...register('is_active')} className="size-4 accent-[var(--app-primary)]" />
-            Projeto ativo
-          </label>
+            <Field
+              label="Branches permitidas (opcional)"
+              error={fieldError('allowed_branches')}
+              hint="Uma por linha. Aceita padrões simples, ex.: release/*. Vazio = qualquer branch."
+            >
+              <Textarea rows={3} {...register('allowed_branches')} placeholder={'main\nrelease/*'} />
+            </Field>
+          </section>
+
+          <section className="border-t border-line pt-4">
+            <label className="flex items-center gap-2 text-body text-fg">
+              <input type="checkbox" {...register('is_active')} className="size-3.5 accent-accent" />
+              Projeto ativo
+            </label>
+            <p className="mt-1 pl-5.5 text-meta text-fg-subtle">
+              Projetos inativos não aceitam novas builds manuais nem webhooks.
+            </p>
+          </section>
 
           {mutation.isError && !(mutation.error instanceof ApiError && Object.keys(mutation.error.errors).length > 0) ? (
-            <p className="rounded-md bg-[var(--app-danger-soft)] px-3 py-2 text-xs text-[var(--app-danger)]">
+            <p className="flex items-start gap-2 rounded-control bg-danger-soft px-3 py-2 text-body text-danger">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
               {apiErrorMessage(mutation.error)}
             </p>
           ) : null}
 
-          <div className="flex justify-end gap-2 border-t border-[var(--app-border)] pt-4">
+          <div className="flex justify-end gap-2 border-t border-line pt-4">
             <Button type="button" variant="secondary" onClick={() => navigate(-1)}>
               Cancelar
             </Button>

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react'
+import { IconButton } from '@/components/ui'
 import { cn } from '@/lib/cn'
 
 type ToastTone = 'success' | 'error' | 'info'
@@ -20,6 +21,18 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 let nextId = 1
+
+const toneIcon: Record<ToastTone, typeof CheckCircle2> = {
+  success: CheckCircle2,
+  error: AlertTriangle,
+  info: Info,
+}
+
+const toneColor: Record<ToastTone, string> = {
+  success: 'text-success',
+  error: 'text-danger',
+  info: 'text-info',
+}
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
@@ -44,41 +57,38 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed top-4 right-4 z-[100] flex w-80 flex-col gap-2">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            role="status"
-            className={cn(
-              'pointer-events-auto flex items-start gap-2 rounded-lg border bg-[var(--app-surface)] p-3 shadow-lg',
-              toast.tone === 'success' && 'border-emerald-200',
-              toast.tone === 'error' && 'border-red-200',
-              toast.tone === 'info' && 'border-blue-200',
-            )}
-          >
-            {toast.tone === 'success' ? (
-              <CheckCircle2 className="mt-0.5 size-4 text-[var(--app-success)]" />
-            ) : toast.tone === 'error' ? (
-              <AlertTriangle className="mt-0.5 size-4 text-[var(--app-danger)]" />
-            ) : (
-              <Info className="mt-0.5 size-4 text-[var(--app-info)]" />
-            )}
-            <div className="flex-1">
-              <p className="text-sm font-medium text-[var(--app-fg)]">{toast.title}</p>
-              {toast.description ? (
-                <p className="mt-0.5 text-xs text-[var(--app-fg-muted)]">{toast.description}</p>
-              ) : null}
-            </div>
-            <button
-              type="button"
-              className="rounded p-0.5 text-[var(--app-fg-subtle)] hover:bg-[var(--app-surface-2)]"
-              onClick={() => setToasts((current) => current.filter((item) => item.id !== toast.id))}
-              aria-label="Fechar aviso"
+      <div
+        aria-live="polite"
+        aria-atomic="false"
+        className="pointer-events-none fixed top-4 right-4 z-[100] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2"
+      >
+        {toasts.map((toast) => {
+          const Icon = toneIcon[toast.tone]
+
+          return (
+            <div
+              key={toast.id}
+              role="status"
+              className="animate-toast-in pointer-events-auto flex items-start gap-2.5 rounded-surface bg-surface p-3 shadow-overlay"
             >
-              <X className="size-3.5" />
-            </button>
-          </div>
-        ))}
+              <Icon className={cn('mt-px size-4 shrink-0', toneColor[toast.tone])} aria-hidden />
+              <div className="min-w-0 flex-1">
+                <p className="text-body font-medium text-fg">{toast.title}</p>
+                {toast.description ? (
+                  <p className="mt-0.5 text-meta break-words text-fg-muted">{toast.description}</p>
+                ) : null}
+              </div>
+              <IconButton
+                label="Fechar aviso"
+                size="sm"
+                className="-mt-1 -mr-1"
+                onClick={() => setToasts((current) => current.filter((item) => item.id !== toast.id))}
+              >
+                <X className="size-3.5" aria-hidden />
+              </IconButton>
+            </div>
+          )
+        })}
       </div>
     </ToastContext.Provider>
   )

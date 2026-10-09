@@ -1,7 +1,32 @@
-import { Badge } from '@/components/ui'
+import { cn } from '@/lib/cn'
+import { Badge, type SemanticTone } from '@/components/ui'
 import type { BuildStatus, RunnerStatus, WebhookStatus } from '@/lib/types'
 
-const buildStatusTone: Record<BuildStatus, 'neutral' | 'success' | 'danger' | 'warning' | 'info' | 'accent'> = {
+/**
+ * Estados compartilham a mesma linguagem em todo o painel:
+ * pastilha com ponto + texto. A cor nunca é o único indicador.
+ */
+function StatusPill({
+  tone,
+  label,
+  pulse = false,
+}: {
+  tone: SemanticTone
+  label: string
+  pulse?: boolean
+}) {
+  return (
+    <Badge tone={tone}>
+      <span
+        className={cn('size-1.5 shrink-0 rounded-full bg-current', pulse && 'animate-pulse')}
+        aria-hidden
+      />
+      {label}
+    </Badge>
+  )
+}
+
+const buildStatusTone: Record<BuildStatus, SemanticTone> = {
   queued: 'neutral',
   preparing: 'info',
   running: 'accent',
@@ -11,20 +36,26 @@ const buildStatusTone: Record<BuildStatus, 'neutral' | 'success' | 'danger' | 'w
 }
 
 export function BuildStatusBadge({ status, label }: { status: BuildStatus; label?: string }) {
-  return <Badge tone={buildStatusTone[status] ?? 'neutral'}>{label ?? status}</Badge>
+  return (
+    <StatusPill
+      tone={buildStatusTone[status] ?? 'neutral'}
+      label={label ?? status}
+      pulse={status === 'running'}
+    />
+  )
 }
 
-const runnerStatusTone: Record<RunnerStatus, 'success' | 'neutral' | 'danger'> = {
+const runnerStatusTone: Record<RunnerStatus, SemanticTone> = {
   online: 'success',
   offline: 'neutral',
   disabled: 'danger',
 }
 
 export function RunnerStatusBadge({ status, label }: { status: RunnerStatus; label?: string }) {
-  return <Badge tone={runnerStatusTone[status] ?? 'neutral'}>{label ?? status}</Badge>
+  return <StatusPill tone={runnerStatusTone[status] ?? 'neutral'} label={label ?? status} />
 }
 
-const webhookStatusTone: Record<WebhookStatus, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = {
+const webhookStatusTone: Record<WebhookStatus, SemanticTone> = {
   accepted: 'success',
   duplicate: 'info',
   rejected: 'danger',
@@ -33,5 +64,5 @@ const webhookStatusTone: Record<WebhookStatus, 'success' | 'warning' | 'danger' 
 }
 
 export function WebhookStatusBadge({ status, label }: { status: WebhookStatus; label?: string }) {
-  return <Badge tone={webhookStatusTone[status] ?? 'neutral'}>{label ?? status}</Badge>
+  return <StatusPill tone={webhookStatusTone[status] ?? 'neutral'} label={label ?? status} />
 }

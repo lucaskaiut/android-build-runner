@@ -1,6 +1,14 @@
 import { NavLink, Outlet, useNavigate } from 'react-router'
-import { HardDriveDownload, LayoutDashboard, FolderKanban, Hammer, Server, LogOut, Plus } from 'lucide-react'
-import { Button } from '@/components/ui'
+import {
+  FolderKanban,
+  Hammer,
+  HardDriveDownload,
+  LayoutDashboard,
+  LogOut,
+  Plus,
+  Server,
+} from 'lucide-react'
+import { ButtonLink, IconButton, Spinner } from '@/components/ui'
 import { useToast } from '@/components/toast'
 import { cn } from '@/lib/cn'
 import { useCurrentUser, useLogout } from '@/features/auth/useAuth'
@@ -11,6 +19,29 @@ const navItems = [
   { to: '/builds', label: 'Builds', icon: Hammer, end: false },
   { to: '/runners', label: 'Runners', icon: Server, end: false },
 ]
+
+function navItemClass(isActive: boolean) {
+  return cn(
+    'focus-ring flex h-8 items-center gap-2.5 rounded-control px-2.5 text-body whitespace-nowrap transition-colors',
+    isActive
+      ? 'bg-accent-soft font-medium text-accent'
+      : 'text-fg-muted hover:bg-fill-hover hover:text-fg',
+  )
+}
+
+function Brand() {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-control bg-ink text-white">
+        <HardDriveDownload className="size-4" aria-hidden />
+      </span>
+      <span className="min-w-0 leading-tight">
+        <span className="block truncate text-body font-semibold text-fg">Build Platform</span>
+        <span className="block text-micro text-fg-subtle">runner local · self-hosted</span>
+      </span>
+    </div>
+  )
+}
 
 export function AppLayout() {
   const { data } = useCurrentUser()
@@ -27,61 +58,69 @@ export function AppLayout() {
     }
   }
 
+  const logoutButton = (
+    <IconButton label="Sair" onClick={handleLogout} disabled={logout.isPending}>
+      {logout.isPending ? <Spinner className="size-3.5" /> : <LogOut className="size-4" aria-hidden />}
+    </IconButton>
+  )
+
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
-      <aside className="flex shrink-0 flex-col border-b border-[var(--app-border)] bg-[var(--app-surface)] md:w-56 md:border-r md:border-b-0">
-        <div className="flex items-center gap-2 px-4 py-4">
-          <div className="flex size-8 items-center justify-center rounded-md bg-[var(--app-primary)] text-white">
-            <HardDriveDownload className="size-4" />
-          </div>
-          <div className="leading-tight">
-            <p className="text-sm font-semibold">Build Platform</p>
-            <p className="text-[11px] text-[var(--app-fg-subtle)]">runner local</p>
-          </div>
+    <div className="flex min-h-screen bg-canvas">
+      <aside className="hidden w-[232px] shrink-0 flex-col bg-panel md:flex">
+        <div className="px-4 pt-5 pb-4">
+          <Brand />
         </div>
 
-        <nav className="flex gap-1 overflow-x-auto px-2 pb-2 md:flex-col md:gap-0.5 md:pb-0">
+        <div className="px-3 pb-3">
+          <ButtonLink to="/builds/new" className="w-full">
+            <Plus className="size-4" aria-hidden /> Nova build
+          </ButtonLink>
+        </div>
+
+        <nav aria-label="Navegação principal" className="flex flex-col gap-0.5 px-2">
           {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm whitespace-nowrap transition-colors',
-                  isActive
-                    ? 'bg-[var(--app-surface-2)] font-medium text-[var(--app-fg)]'
-                    : 'text-[var(--app-fg-muted)] hover:bg-[var(--app-surface-2)]',
-                )
-              }
-            >
-              <item.icon className="size-4" />
+            <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => navItemClass(isActive)}>
+              <item.icon className="size-4 shrink-0" aria-hidden />
               {item.label}
             </NavLink>
           ))}
-          <NavLink
-            to="/builds/new"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm whitespace-nowrap text-[var(--app-fg-muted)] transition-colors hover:bg-[var(--app-surface-2)]"
-          >
-            <Plus className="size-4" />
-            Nova build
-          </NavLink>
         </nav>
 
-        <div className="mt-auto hidden border-t border-[var(--app-border)] p-3 md:block">
-          <p className="truncate text-xs font-medium">{data?.user.name}</p>
-          <p className="truncate text-[11px] text-[var(--app-fg-subtle)]">{data?.user.email}</p>
-          <Button variant="secondary" size="sm" className="mt-2 w-full" onClick={handleLogout} loading={logout.isPending}>
-            <LogOut className="size-3.5" /> Sair
-          </Button>
+        <div className="mt-auto border-t border-line p-3">
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1 px-1">
+              <p className="truncate text-body font-medium text-fg">{data?.user.name}</p>
+              <p className="truncate text-micro text-fg-subtle">{data?.user.email}</p>
+            </div>
+            {logoutButton}
+          </div>
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1">
-        <div className="mx-auto max-w-6xl px-4 py-6 md:px-6">
-          <Outlet />
-        </div>
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center justify-between gap-3 bg-panel px-4 py-3 md:hidden">
+          <Brand />
+          {logoutButton}
+        </header>
+
+        <nav
+          aria-label="Navegação principal"
+          className="flex gap-1 overflow-x-auto bg-panel px-3 pb-2 md:hidden"
+        >
+          {navItems.map((item) => (
+            <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => navItemClass(isActive)}>
+              <item.icon className="size-4 shrink-0" aria-hidden />
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <main className="min-w-0 flex-1">
+          <div className="mx-auto w-full max-w-[1280px] px-4 py-5 md:px-7 md:py-6">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

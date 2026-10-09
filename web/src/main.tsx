@@ -5,6 +5,8 @@ import { RouterProvider } from 'react-router'
 import { ToastProvider } from '@/components/toast'
 import { ApiError } from '@/lib/api'
 import { router } from '@/App'
+import '@fontsource-variable/inter/wght.css'
+import '@fontsource-variable/jetbrains-mono/wght.css'
 import './index.css'
 
 const queryClient = new QueryClient({
