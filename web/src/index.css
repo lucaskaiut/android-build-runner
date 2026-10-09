@@ -1,0 +1,61 @@
+@import 'tailwindcss';
+
+:root {
+  --app-bg: #f6f7f9;
+  --app-surface: #ffffff;
+  --app-surface-2: #f0f1f4;
+  --app-surface-3: #e4e6ea;
+  --app-fg: #17181c;
+  --app-fg-muted: #5f6470;
+  --app-fg-subtle: #8b909c;
+  --app-border: #dfe2e8;
+  --app-border-strong: #c9cdd6;
+  --app-primary: #3f3f46;
+  --app-primary-hover: #27272a;
+  --app-primary-fg: #ffffff;
+  --app-accent: #4f46e5;
+  --app-accent-soft: #eef2ff;
+  --app-danger: #dc2626;
+  --app-danger-soft: #fef2f2;
+  --app-success: #047857;
+  --app-success-soft: #ecfdf5;
+  --app-warning: #b45309;
+  --app-warning-soft: #fffbeb;
+  --app-info: #1d4ed8;
+  --app-info-soft: #eff6ff;
+  --app-ring: rgb(79 70 229 / 0.4);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-fg);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+pre,
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+::selection {
+  background: var(--app-accent-soft);
+}
