@@ -24,6 +24,7 @@ $runnerRoot = Split-Path -Parent $testsDirectory
 . (Join-Path $runnerRoot 'src\ApiClient.ps1')
 . (Join-Path $runnerRoot 'src\ProcessControl.ps1')
 . (Join-Path $runnerRoot 'src\LogCollector.ps1')
+. (Join-Path $runnerRoot 'src\Secrets.ps1')
 . (Join-Path $runnerRoot 'src\Workspace.ps1')
 . (Join-Path $runnerRoot 'src\ArtifactCollector.ps1')
 

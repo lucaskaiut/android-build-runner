@@ -28,6 +28,7 @@ $ProgressPreference = 'SilentlyContinue'
 . (Join-Path $PSScriptRoot 'ApiClient.ps1')
 . (Join-Path $PSScriptRoot 'ProcessControl.ps1')
 . (Join-Path $PSScriptRoot 'LogCollector.ps1')
+. (Join-Path $PSScriptRoot 'Secrets.ps1')
 . (Join-Path $PSScriptRoot 'Workspace.ps1')
 . (Join-Path $PSScriptRoot 'ArtifactCollector.ps1')
 
@@ -319,6 +320,7 @@ function Invoke-BuildScript {
                     $result.Status = 'failed'
                     $errorTail = Get-StderrTail -Path $Context.StderrPath
                     if (-not $errorTail) { $errorTail = Get-StderrTail -Path $Context.StdoutPath }
+                    $errorTail = Protect-SecretText -Text $errorTail -Masks $LogState.SecretMasks
                     $result.ErrorMessage = if ($errorTail) { "Script terminou com código $($exitState.ExitCode): $errorTail" }
                     else { "Script terminou com código $($exitState.ExitCode)." }
                 }
@@ -349,6 +351,8 @@ function Invoke-BuildWorkflow {
 
     $context = New-BuildContext -Config $Config -Build $BuildPayload
     $logState = New-LogCollectorState -Config $Config
+    $secretMasks = Get-SecretMaskValues -Context $context
+    $logState.SecretMasks = $secretMasks
     $buildId = $context.Id
 
     Write-RunnerLog ("Build #{0} recebida: projeto '{1}' ({2}), perfil '{3}', ref: {4}" -f `
@@ -363,8 +367,13 @@ function Invoke-BuildWorkflow {
     try {
         Initialize-BuildWorkspace -Context $context -Config $Config | Out-Null
         Add-SystemLogLine -LogState $logState -Message ("Executor: checkout concluído no commit {0}." -f $context.ResolvedSha.Substring(0, 12))
+
+        $secretFilesWritten = Write-BuildSecretFiles -Context $context
+        if ($secretFilesWritten -gt 0) {
+            Add-SystemLogLine -LogState $logState -Message ("Executor: {0} arquivo(s) secreto(s) aplicado(s) no workspace." -f $secretFilesWritten)
+        }
     } catch {
-        $message = "Preparação falhou: $($_.Exception.Message)"
+        $message = Protect-SecretText -Text "Preparação falhou: $($_.Exception.Message)" -Masks $secretMasks
         Write-RunnerLog $message 'ERROR'
         Add-SystemLogLine -LogState $logState -Message ("Executor: {0}" -f $message)
 

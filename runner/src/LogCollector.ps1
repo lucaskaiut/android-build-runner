@@ -132,6 +132,7 @@ function New-LogCollectorState {
         NextLineNumber = 0
         PendingBatches = (New-Object System.Collections.ArrayList)
         SystemBuffer = (New-Object System.Collections.ArrayList)
+        SecretMasks = @()
         MaxPendingBatches = [Math]::Max(1, [int]([int]$Config['max_pending_log_lines'] / [Math]::Max(1, [int]$Config['log_batch_max_lines'])))
         DroppedBatches = 0
     }
@@ -153,7 +154,7 @@ function Read-NewBuildLogLines {
     $LogState.StdoutPartial = $partial
 
     foreach ($line in $stdoutLines) {
-        $lines.Add(@{ Stream = 'stdout'; Message = $line }) | Out-Null
+        $lines.Add(@{ Stream = 'stdout'; Message = (Protect-SecretText -Text $line -Masks $LogState.SecretMasks) }) | Out-Null
     }
 
     $position = [long]$LogState.StderrPosition
@@ -163,7 +164,7 @@ function Read-NewBuildLogLines {
     $LogState.StderrPartial = $partial
 
     foreach ($line in $stderrLines) {
-        $lines.Add(@{ Stream = 'stderr'; Message = $line }) | Out-Null
+        $lines.Add(@{ Stream = 'stderr'; Message = (Protect-SecretText -Text $line -Masks $LogState.SecretMasks) }) | Out-Null
     }
 
     # The comma prevents PowerShell from unrolling a single-element list.

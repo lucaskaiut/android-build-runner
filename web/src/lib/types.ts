@@ -168,3 +168,19 @@ export interface WebhookDelivery {
   build_id: number | null
   created_at: string
 }
+
+export interface ProjectSecret {
+  id: number
+  key: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ProjectSecretFile {
+  id: number
+  path: string
+  size: number
+  sha256: string
+  created_at: string
+  updated_at: string
+}

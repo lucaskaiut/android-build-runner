@@ -48,8 +48,16 @@ class BuildExecutionController extends Controller
             'events' => ['required', 'array', 'max:'.(int) config('builds.log_max_batch_events')],
             'events.*.line_no' => ['required', 'integer', 'min:0', 'max:65535'],
             'events.*.stream' => ['required', 'string', Rule::in(['stdout', 'stderr', 'system'])],
-            'events.*.message' => ['required', 'string', 'max:65536'],
+            'events.*.message' => ['present', 'nullable', 'string', 'max:65536'],
         ]);
+
+        // Blank log lines are valid; ConvertEmptyStringsToNull turns them
+        // into null, so normalize back to an empty string before persisting.
+        $events = array_map(static function (array $event): array {
+            $event['message'] = $event['message'] ?? '';
+
+            return $event;
+        }, $data['events']);
 
         /** @var Runner $runner */
         $runner = $request->user();
@@ -62,7 +70,7 @@ class BuildExecutionController extends Controller
             ]);
         }
 
-        $result = $this->logs->ingest($build, $data['batch_id'], $data['events']);
+        $result = $this->logs->ingest($build, $data['batch_id'], $events);
 
         return $this->controlResponse($build, extra: $result);
     }

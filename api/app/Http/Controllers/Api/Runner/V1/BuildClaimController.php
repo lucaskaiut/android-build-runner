@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Runner\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Build;
+use App\Models\ProjectSecret;
+use App\Models\ProjectSecretFile;
 use App\Models\Runner;
 use App\Services\BuildClaimService;
 use Illuminate\Http\JsonResponse;
@@ -60,8 +62,10 @@ class BuildClaimController extends Controller
     }
 
     /**
-     * The runner receives only what it needs to execute the build. Secrets
-     * (webhook secret, tokens) are never part of this payload.
+     * The runner receives only what it needs to execute the build. Platform
+     * credentials (webhook secret, runner tokens) are never part of this
+     * payload; build secrets belong to the project and are delivered only to
+     * the runner that owns the claimed build.
      *
      * @return array<string, mixed>
      */
@@ -95,6 +99,22 @@ class BuildClaimController extends Controller
             ],
             'script' => $profile->build_script,
             'working_directory' => $profile->effectiveWorkingDirectory($project),
+            'secrets' => $project->secrets()
+                ->orderBy('key')
+                ->get()
+                ->mapWithKeys(fn (ProjectSecret $secret) => [$secret->key => $secret->value])
+                ->all() ?: (object) [],
+            'secret_files' => $project->secretFiles()
+                ->orderBy('path')
+                ->get()
+                ->map(fn (ProjectSecretFile $file) => [
+                    'path' => $file->path,
+                    'content_base64' => base64_encode($file->content),
+                    'sha256' => $file->sha256,
+                    'size' => (int) $file->size,
+                ])
+                ->values()
+                ->all(),
             'lease_seconds' => (int) config('builds.lease_seconds'),
             'heartbeat_interval_seconds' => 15,
             'log_flush_interval_ms' => 1000,

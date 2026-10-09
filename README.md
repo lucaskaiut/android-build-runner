@@ -285,6 +285,10 @@ Status atual: 91 testes de backend, 28 do runner e 12 do frontend aprovados.
   rotacionável; apenas o `tokenable` do próprio runner consegue operar suas builds.
 - Scripts de build só podem ser editados por administradores (Gate
   `manage-platform`) e toda alteração sensível é registrada em `audit_logs`.
+- Segredos de build por projeto (variáveis e arquivos, ex.: `.env`, keystore e
+  `credentials.json`) são criptografados no banco com `APP_KEY`, write-only no
+  painel (o valor nunca é retornado pela API) e entregues apenas ao runner que
+  reivindicou a build; os valores das variáveis são mascarados nos logs.
 - Webhooks validados por HMAC, com idempotência no banco.
 - Artefatos: caminhos gerados pela API, validação de contenção, download
   autorizado e nunca expostos como diretório estático.

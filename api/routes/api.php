@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\BuildProfileController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\ProjectBranchTriggerController;
 use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\ProjectSecretController;
 use App\Http\Controllers\Api\V1\RunnerController;
 use App\Http\Controllers\Api\Webhooks\GithubWebhookController;
 use Illuminate\Support\Facades\Route;
@@ -53,6 +54,13 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('profiles/{profile}', [BuildProfileController::class, 'destroy']);
         Route::post('profiles/{profile}/activate', [BuildProfileController::class, 'activate']);
         Route::post('profiles/{profile}/deactivate', [BuildProfileController::class, 'deactivate']);
+
+        Route::get('projects/{project}/secrets', [ProjectSecretController::class, 'index']);
+        Route::post('projects/{project}/secrets', [ProjectSecretController::class, 'store']);
+        Route::put('secrets/{secret}', [ProjectSecretController::class, 'update']);
+        Route::delete('secrets/{secret}', [ProjectSecretController::class, 'destroy']);
+        Route::post('projects/{project}/secret-files', [ProjectSecretController::class, 'storeFile']);
+        Route::delete('secret-files/{secretFile}', [ProjectSecretController::class, 'destroyFile']);
 
         Route::get('builds', [BuildController::class, 'index']);
         Route::post('projects/{project}/builds', [BuildController::class, 'store']);

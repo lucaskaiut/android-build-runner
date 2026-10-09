@@ -33,6 +33,27 @@ function New-BuildContext {
 
     $runnerDir = Join-Path $workspace '_runner'
 
+    $secrets = @{}
+    $secretsProperty = $Build.PSObject.Properties['secrets']
+    if ($secretsProperty -and $null -ne $secretsProperty.Value -and $secretsProperty.Value -isnot [string]) {
+        foreach ($property in $secretsProperty.Value.PSObject.Properties) {
+            $secrets[$property.Name] = [string]$property.Value
+        }
+    }
+
+    $secretFiles = New-Object System.Collections.ArrayList
+    $secretFilesProperty = $Build.PSObject.Properties['secret_files']
+    if ($secretFilesProperty -and $null -ne $secretFilesProperty.Value -and $secretFilesProperty.Value -isnot [string]) {
+        foreach ($file in @($secretFilesProperty.Value)) {
+            $secretFiles.Add(@{
+                    Path = [string]$file.path
+                    ContentBase64 = [string]$file.content_base64
+                    Sha256 = [string]$file.sha256
+                    Size = [int]$file.size
+                }) | Out-Null
+        }
+    }
+
     return @{
         Id = [int]$Build.id
         ProjectId = $projectId
@@ -55,6 +76,8 @@ function New-BuildContext {
         RunStatePath = (Join-Path $runnerDir 'run.json')
         ResolvedSha = $null
         GitSshCommand = [string]$Config['git_ssh_command']
+        Secrets = $secrets
+        SecretFiles = $secretFiles
     }
 }
 
@@ -74,6 +97,7 @@ function Invoke-GitCommand {
     if ($Context.GitSshCommand) {
         $gitArguments += @('-c', "core.sshCommand=$($Context.GitSshCommand)")
     }
+    $gitArguments += @('-c', 'core.longpaths=true')
     $gitArguments += $Arguments
 
     return Invoke-ExternalProcess -FilePath $git.Source -Arguments $gitArguments `
@@ -206,6 +230,13 @@ function New-BuildEnvironmentLines {
     if ($Context.Parameters -and $Context.Parameters -isnot [string]) {
         foreach ($property in $Context.Parameters.PSObject.Properties) {
             $variables['BUILD_PARAM_' + $property.Name.ToUpperInvariant()] = [string]$property.Value
+        }
+    }
+
+    if ($Context.ContainsKey('Secrets') -and $Context.Secrets) {
+        foreach ($key in ($Context.Secrets.Keys | Sort-Object)) {
+            if ($variables.Contains($key) -or $key -match '^(?i)BUILD_') { continue }
+            $variables[$key] = [string]$Context.Secrets[$key]
         }
     }
 

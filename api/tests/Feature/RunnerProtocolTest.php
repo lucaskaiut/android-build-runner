@@ -219,6 +219,24 @@ class RunnerProtocolTest extends TestCase
         $this->assertTrue($build->lease_expires_at->isFuture(), 'O envio de logs renova a lease.');
     }
 
+    public function test_log_ingestion_accepts_empty_lines(): void
+    {
+        $runner = Runner::factory()->withToken()->create();
+        $this->actingAsRunner($runner);
+
+        $build = Build::factory()->running($runner->id)->create();
+
+        $this->postJson('/api/runner/v1/builds/'.$build->id.'/logs', [
+            'batch_id' => 'blank-lines',
+            'events' => [
+                ['line_no' => 0, 'stream' => 'stdout', 'message' => ''],
+                ['line_no' => 1, 'stream' => 'stdout', 'message' => 'linha real'],
+            ],
+        ])->assertOk()->assertJsonPath('accepted', 2);
+
+        $this->assertSame(2, $build->logs()->where('stream', '!=', 'system')->count());
+    }
+
     public function test_log_batch_limits_are_enforced(): void
     {
         $runner = Runner::factory()->withToken()->create();

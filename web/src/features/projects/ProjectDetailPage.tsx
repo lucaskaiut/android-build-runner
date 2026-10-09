@@ -8,6 +8,7 @@ import { api, apiErrorMessage } from '@/lib/api'
 import { formatDateTime } from '@/lib/format'
 import { BuildsTable } from '@/features/builds/BuildsTable'
 import { ProfileFormModal } from './ProfileFormModal'
+import { SecretsPanel } from './SecretsPanel'
 import { WebhookPanel } from './WebhookPanel'
 import type { BuildProfile } from '@/lib/types'
 
@@ -235,6 +236,8 @@ export function ProjectDetailPage() {
       </Card>
 
       <WebhookPanel project={project} profiles={profiles} branchTriggers={branchTriggers} />
+
+      <SecretsPanel projectId={project.id} />
 
       <Card
         title="Histórico de builds"

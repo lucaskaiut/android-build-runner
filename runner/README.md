@@ -123,6 +123,18 @@ powershell -ExecutionPolicy Bypass -File scripts\uninstall-service.ps1
 9. Se a API já finalizou a build (reaper/cancelamento), o processo local é
    encerrado e nada é sobrescrito.
 
+## Segredos de build
+
+Cada projeto pode ter variáveis e arquivos secretos cadastrados no painel
+(criptografados no banco e write-only). Ao executar a build, o runner:
+
+- injeta as variáveis no ambiente do script (nomes reservados como `BUILD_*`,
+  `APP_DIR`, `CI` e variáveis de sistema são ignorados);
+- grava cada arquivo secreto dentro do workspace no caminho relativo informado
+  (ex.: `.env`, `credentials.json`, `credentials/android/keystore.jks`),
+  validando o caminho e o SHA-256 antes de escrever;
+- substitui os valores das variáveis por `***` nos logs enviados à API.
+
 ## Scripts de build (exemplos)
 
 **Expo / React Native (APK release):**

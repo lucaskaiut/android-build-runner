@@ -56,6 +56,16 @@ class Project extends Model
         return $this->hasMany(ProjectBranchTrigger::class);
     }
 
+    public function secrets(): HasMany
+    {
+        return $this->hasMany(ProjectSecret::class);
+    }
+
+    public function secretFiles(): HasMany
+    {
+        return $this->hasMany(ProjectSecretFile::class);
+    }
+
     public function webhookDeliveries(): HasMany
     {
         return $this->hasMany(GithubWebhookDelivery::class);

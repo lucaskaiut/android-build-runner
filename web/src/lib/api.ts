@@ -6,6 +6,8 @@ import type {
   BuildProfile,
   Paginated,
   Project,
+  ProjectSecret,
+  ProjectSecretFile,
   Runner,
   User,
   WebhookDelivery,
@@ -151,6 +153,28 @@ export const api = {
     ),
   webhookDeliveries: (id: number, params?: Record<string, number>) =>
     request<Paginated<WebhookDelivery>>(`/projects/${id}/webhook-deliveries`, { params }),
+
+  // Project secrets
+  secrets: (projectId: number) =>
+    request<{ secrets: ProjectSecret[]; secret_files: ProjectSecretFile[] }>(
+      `/projects/${projectId}/secrets`,
+    ),
+  createSecret: (projectId: number, body: { key: string; value: string }) =>
+    request<{ secret: ProjectSecret }>(`/projects/${projectId}/secrets`, { method: 'post', body }),
+  updateSecret: (id: number, value: string) =>
+    request<{ secret: ProjectSecret }>(`/secrets/${id}`, { method: 'put', body: { value } }),
+  deleteSecret: (id: number) => request<{ message: string }>(`/secrets/${id}`, { method: 'delete' }),
+  uploadSecretFile: (projectId: number, path: string, file: File) => {
+    const formData = new FormData()
+    formData.set('path', path)
+    formData.set('file', file)
+    return request<{ secret_file: ProjectSecretFile }>(`/projects/${projectId}/secret-files`, {
+      method: 'post',
+      formData,
+    })
+  },
+  deleteSecretFile: (id: number) =>
+    request<{ message: string }>(`/secret-files/${id}`, { method: 'delete' }),
 
   // Branch triggers
   createBranchTrigger: (projectId: number, body: { build_profile_id: number; branch_pattern: string }) =>
