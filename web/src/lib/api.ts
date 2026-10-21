@@ -9,6 +9,7 @@ import type {
   ProjectSecret,
   ProjectSecretFile,
   Runner,
+  SubmitConfig,
   User,
   WebhookDelivery,
 } from './types'
@@ -251,6 +252,8 @@ export interface ProfileInput {
   env?: Record<string, string>
   parameters?: ProfileParameter[]
   is_active?: boolean
+  auto_submit?: boolean
+  submit_config?: SubmitConfig | null
 }
 
 export interface ProfileParameter {

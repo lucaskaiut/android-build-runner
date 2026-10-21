@@ -51,6 +51,20 @@ class BuildCreationTest extends TestCase
         ]);
     }
 
+    public function test_build_waits_for_submit_when_profile_has_auto_submit(): void
+    {
+        $this->actingAsAdmin();
+
+        $project = Project::factory()->create();
+        $profile = BuildProfile::factory()->withAutoSubmit()->create(['project_id' => $project->id]);
+
+        $this->postJson('/api/v1/projects/'.$project->id.'/builds', [
+            'build_profile_id' => $profile->id,
+        ])->assertCreated()
+            ->assertJsonPath('build.submit_status', 'pending')
+            ->assertJsonPath('build.submit_status_label', 'Aguardando submit');
+    }
+
     public function test_build_accepts_explicit_commit_sha_and_validates_format(): void
     {
         $this->actingAsAdmin();

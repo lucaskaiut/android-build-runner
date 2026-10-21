@@ -9,25 +9,78 @@ import { useToast } from '@/components/toast'
 import { api, apiErrorMessage, type ProfileInput } from '@/lib/api'
 import type { BuildProfile, ProfileParameterDefinition } from '@/lib/types'
 
-const schema = z.object({
-  name: z.string().min(1, 'Informe o nome.').max(120),
-  slug: z
-    .string()
-    .min(1, 'Informe o identificador.')
-    .max(80)
-    .regex(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/, 'Use apenas minúsculas, números, "-" e "_".'),
-  build_script: z.string().min(1, 'Informe o script de build.').max(100000),
-  working_directory: z
-    .string()
-    .refine(
-      (value) => !value || (!value.includes('..') && !value.startsWith('/') && !value.includes('\\')),
-      'Use um caminho relativo sem "..".',
-    ),
-  timeout_seconds: z.number().int().min(30, 'Mínimo de 30 segundos.').max(21600, 'Máximo de 6 horas.'),
-  artifact_patterns: z.string(),
-  env: z.string(),
-  is_active: z.boolean(),
-})
+const schema = z
+  .object({
+    name: z.string().min(1, 'Informe o nome.').max(120),
+    slug: z
+      .string()
+      .min(1, 'Informe o identificador.')
+      .max(80)
+      .regex(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/, 'Use apenas minúsculas, números, "-" e "_".'),
+    build_script: z.string().min(1, 'Informe o script de build.').max(100000),
+    working_directory: z
+      .string()
+      .refine(
+        (value) => !value || (!value.includes('..') && !value.startsWith('/') && !value.includes('\\')),
+        'Use um caminho relativo sem "..".',
+      ),
+    timeout_seconds: z.number().int().min(30, 'Mínimo de 30 segundos.').max(21600, 'Máximo de 6 horas.'),
+    artifact_patterns: z.string(),
+    env: z.string(),
+    is_active: z.boolean(),
+    auto_submit: z.boolean(),
+    submit_provider: z.literal('google_play'),
+    submit_package_name: z.string().max(255),
+    submit_track: z.string().max(50),
+    submit_service_account_file: z.string().max(500),
+    submit_artifact_pattern: z.string().max(255),
+    submit_release_status: z.enum(['completed', 'draft']),
+    submit_release_name: z.string().max(120),
+  })
+  .superRefine((values, ctx) => {
+    if (!values.auto_submit) return
+
+    const add = (path: string, message: string) => {
+      ctx.addIssue({ code: 'custom', path: [path], message })
+    }
+
+    if (!values.submit_package_name.trim()) {
+      add('submit_package_name', 'Informe o package name do app.')
+    } else if (!/^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$/.test(values.submit_package_name.trim())) {
+      add('submit_package_name', 'Use um package name válido, como com.exemplo.app.')
+    }
+
+    if (!values.submit_track.trim()) {
+      add('submit_track', 'Informe a track da loja.')
+    } else if (!/^[a-z][a-z0-9_-]*$/.test(values.submit_track.trim())) {
+      add('submit_track', 'Use minúsculas, números, "-" e "_".')
+    }
+
+    const serviceAccount = values.submit_service_account_file.trim()
+    if (!serviceAccount) {
+      add('submit_service_account_file', 'Informe o arquivo JSON da service account.')
+    } else if (
+      serviceAccount.includes('..') ||
+      serviceAccount.startsWith('/') ||
+      serviceAccount.includes('\\') ||
+      serviceAccount.includes(':')
+    ) {
+      add('submit_service_account_file', 'Use um caminho relativo dentro do projeto, sem "..".')
+    }
+
+    const artifactPattern = values.submit_artifact_pattern.trim()
+    if (!artifactPattern) {
+      add('submit_artifact_pattern', 'Informe o padrão do AAB.')
+    } else if (
+      artifactPattern.includes('..') ||
+      artifactPattern.startsWith('/') ||
+      artifactPattern.includes('\\') ||
+      artifactPattern.includes(':') ||
+      artifactPattern.startsWith('\\\\')
+    ) {
+      add('submit_artifact_pattern', 'Use um padrão relativo, sem "..".')
+    }
+  })
 
 type FormValues = z.infer<typeof schema>
 
@@ -85,6 +138,7 @@ export function ProfileFormModal({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -97,8 +151,18 @@ export function ProfileFormModal({
       artifact_patterns: '',
       env: '',
       is_active: true,
+      auto_submit: false,
+      submit_provider: 'google_play',
+      submit_package_name: '',
+      submit_track: 'alpha',
+      submit_service_account_file: 'credentials.json',
+      submit_artifact_pattern: 'android/app/build/outputs/bundle/release/*.aab',
+      submit_release_status: 'completed',
+      submit_release_name: '',
     },
   })
+
+  const autoSubmit = watch('auto_submit')
 
   useEffect(() => {
     if (!open) return
@@ -113,6 +177,15 @@ export function ProfileFormModal({
         artifact_patterns: (profile.artifact_patterns ?? []).join('\n'),
         env: serializeEnv(profile.env),
         is_active: profile.is_active,
+        auto_submit: profile.auto_submit,
+        submit_provider: profile.submit_config?.provider ?? 'google_play',
+        submit_package_name: profile.submit_config?.package_name ?? '',
+        submit_track: profile.submit_config?.track ?? 'alpha',
+        submit_service_account_file: profile.submit_config?.service_account_file ?? 'credentials.json',
+        submit_artifact_pattern:
+          profile.submit_config?.artifact_pattern ?? 'android/app/build/outputs/bundle/release/*.aab',
+        submit_release_status: profile.submit_config?.release_status ?? 'completed',
+        submit_release_name: profile.submit_config?.release_name ?? '',
       })
       setParameters((profile.parameters ?? []).map((item) => ({ ...item, uid: parameterUid++ })))
     } else {
@@ -125,6 +198,14 @@ export function ProfileFormModal({
         artifact_patterns: '',
         env: '',
         is_active: true,
+        auto_submit: false,
+        submit_provider: 'google_play',
+        submit_package_name: '',
+        submit_track: 'alpha',
+        submit_service_account_file: 'credentials.json',
+        submit_artifact_pattern: 'android/app/build/outputs/bundle/release/*.aab',
+        submit_release_status: 'completed',
+        submit_release_name: '',
       })
       setParameters([])
     }
@@ -160,6 +241,18 @@ export function ProfileFormModal({
             options: parameter.options?.filter((option) => option.trim() !== ''),
           })),
         is_active: values.is_active,
+        auto_submit: values.auto_submit,
+        submit_config: values.auto_submit
+          ? {
+              provider: values.submit_provider,
+              package_name: values.submit_package_name.trim(),
+              track: values.submit_track.trim(),
+              service_account_file: values.submit_service_account_file.trim(),
+              artifact_pattern: values.submit_artifact_pattern.trim(),
+              release_status: values.submit_release_status,
+              release_name: values.submit_release_name.trim() || null,
+            }
+          : null,
       }
 
       return isEdit ? api.updateProfile(profile.id, payload) : api.createProfile(projectId, payload)
@@ -263,6 +356,73 @@ export function ProfileFormModal({
               <Textarea rows={3} {...register('env')} placeholder="APP_VARIANT=production" />
             </Field>
           </div>
+        </section>
+
+        <section className="flex flex-col gap-3 border-t border-line pt-4">
+          <div>
+            <h3 className="text-body font-semibold text-fg">Submit automático</h3>
+            <p className="mt-1 text-meta text-fg-subtle">
+              Após uma build bem-sucedida, envia o AAB para a Google Play e faz commit da track.
+            </p>
+          </div>
+
+          <label className="flex items-center gap-2 text-body text-fg">
+            <input type="checkbox" {...register('auto_submit')} className="size-3.5 accent-accent" />
+            Enviar para a loja automaticamente
+          </label>
+
+          {autoSubmit ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field
+                label="Package name"
+                error={errors.submit_package_name?.message}
+                hint="Ex.: com.noxsolucoes.webrasterapp"
+                required
+              >
+                <Input {...register('submit_package_name')} placeholder="com.exemplo.app" />
+              </Field>
+              <Field label="Track" error={errors.submit_track?.message} hint="Ex.: alpha, beta, internal" required>
+                <Input {...register('submit_track')} placeholder="alpha" />
+              </Field>
+              <Field
+                label="Arquivo da service account"
+                error={errors.submit_service_account_file?.message}
+                hint="Caminho relativo de um arquivo secreto do projeto."
+                required
+              >
+                <Input {...register('submit_service_account_file')} placeholder="credentials.json" />
+              </Field>
+              <Field
+                label="Status do release"
+                error={errors.submit_release_status?.message}
+                hint="Concluído faz rollout; rascunho deixa para revisão manual."
+                required
+              >
+                <Select {...register('submit_release_status')}>
+                  <option value="completed">Concluído (rollout)</option>
+                  <option value="draft">Rascunho (draft)</option>
+                </Select>
+              </Field>
+              <Field
+                label="Padrão do AAB"
+                error={errors.submit_artifact_pattern?.message}
+                hint="Relativo ao diretório de execução."
+                required
+              >
+                <Input
+                  {...register('submit_artifact_pattern')}
+                  placeholder="android/app/build/outputs/bundle/release/*.aab"
+                />
+              </Field>
+              <Field label="Nome do release (opcional)" error={errors.submit_release_name?.message}>
+                <Input {...register('submit_release_name')} placeholder="1.0.0" />
+              </Field>
+              <p className="text-meta text-fg-subtle sm:col-span-2">
+                A service account precisa estar cadastrada em <strong>Segredos</strong> e ter permissão de
+                gerenciar a track na Play Console. O mesmo JSON usado pelo EAS Submit pode ser reutilizado.
+              </p>
+            </div>
+          ) : null}
         </section>
 
         <section className="flex flex-col gap-2 border-t border-line pt-4">

@@ -5,8 +5,10 @@ namespace App\Http\Requests\Api\V1;
 use App\Models\BuildProfile;
 use App\Rules\ArtifactPattern;
 use App\Rules\SafeRelativePath;
+use App\Rules\SecretFilePath;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class SaveBuildProfileRequest extends FormRequest
 {
@@ -68,7 +70,60 @@ class SaveBuildProfileRequest extends FormRequest
             'parameters.*.options' => ['nullable', 'array', 'max:50'],
             'parameters.*.options.*' => ['string', 'max:500'],
             'is_active' => ['sometimes', 'boolean'],
+            'auto_submit' => ['sometimes', 'boolean'],
+            'submit_config' => ['nullable', 'array'],
+            'submit_config.provider' => ['nullable', 'string', Rule::in(['google_play'])],
+            'submit_config.package_name' => [
+                'nullable', 'string', 'max:255',
+                'regex:/^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$/',
+            ],
+            'submit_config.track' => ['nullable', 'string', 'max:50', 'regex:/^[a-z][a-z0-9_-]*$/'],
+            'submit_config.service_account_file' => [
+                'nullable', 'string', 'max:500', new SecretFilePath,
+            ],
+            'submit_config.artifact_pattern' => ['nullable', 'string', 'max:255', new ArtifactPattern],
+            'submit_config.release_status' => ['nullable', 'string', Rule::in(['completed', 'draft'])],
+            'submit_config.release_name' => ['nullable', 'string', 'max:120'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            /** @var BuildProfile|null $profile */
+            $profile = $this->route('profile');
+
+            $autoSubmit = $this->has('auto_submit')
+                ? $this->boolean('auto_submit')
+                : (bool) ($profile?->auto_submit ?? false);
+
+            if (! $autoSubmit) {
+                return;
+            }
+
+            $config = $this->input('submit_config');
+
+            if (! is_array($config) || $config === []) {
+                $config = $profile?->submit_config ?? [];
+            }
+
+            $required = [
+                'provider' => 'Informe o provedor do submit.',
+                'package_name' => 'Informe o package name do app.',
+                'track' => 'Informe a track da loja.',
+                'service_account_file' => 'Informe o arquivo JSON da service account.',
+                'artifact_pattern' => 'Informe o padrão do AAB.',
+                'release_status' => 'Informe o status do release.',
+            ];
+
+            foreach ($required as $field => $message) {
+                $value = $config[$field] ?? null;
+
+                if (! is_string($value) || trim($value) === '') {
+                    $validator->errors()->add('submit_config.'.$field, $message);
+                }
+            }
+        });
     }
 
     /**

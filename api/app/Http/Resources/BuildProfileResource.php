@@ -25,6 +25,8 @@ class BuildProfileResource extends JsonResource
             'env' => $this->env ?? (object) [],
             'parameters' => $this->parameterDefinitions(),
             'is_active' => (bool) $this->is_active,
+            'auto_submit' => (bool) $this->auto_submit,
+            'submit_config' => $this->submit_config,
             'builds_count' => $this->whenCounted('builds'),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

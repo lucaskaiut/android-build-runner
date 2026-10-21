@@ -1,4 +1,5 @@
 export type BuildStatus = 'queued' | 'preparing' | 'running' | 'success' | 'failed' | 'cancelled'
+export type SubmitStatus = 'pending' | 'success' | 'failed' | 'skipped'
 export type BuildSource = 'manual' | 'api' | 'webhook'
 export type RunnerStatus = 'online' | 'offline' | 'disabled'
 export type LogStreamType = 'stdout' | 'stderr' | 'system'
@@ -72,6 +73,16 @@ export interface ProfileParameterDefinition {
   options?: string[]
 }
 
+export interface SubmitConfig {
+  provider: 'google_play'
+  package_name: string
+  track: string
+  service_account_file: string
+  artifact_pattern: string
+  release_status: 'completed' | 'draft'
+  release_name?: string | null
+}
+
 export interface BuildProfile {
   id: number
   project_id: number
@@ -84,6 +95,8 @@ export interface BuildProfile {
   env: Record<string, string>
   parameters: ProfileParameterDefinition[]
   is_active: boolean
+  auto_submit: boolean
+  submit_config: SubmitConfig | null
   builds_count?: number
   created_at: string
   updated_at: string
@@ -104,6 +117,11 @@ export interface Build {
   id: number
   status: BuildStatus
   status_label: string
+  submit_status: SubmitStatus | null
+  submit_status_label: string | null
+  submit_message: string | null
+  submit_version_code: string | null
+  submitted_at: string | null
   source: BuildSource
   source_label: string
   branch: string | null

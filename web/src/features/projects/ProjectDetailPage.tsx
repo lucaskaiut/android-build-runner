@@ -312,6 +312,7 @@ export function ProjectDetailPage() {
                     <Th>Perfil</Th>
                     <Th>Timeout</Th>
                     <Th>Artefatos esperados</Th>
+                    <Th>Submit</Th>
                     <Th>Estado</Th>
                     <Th className="w-28 text-right">Ações</Th>
                   </tr>
@@ -328,6 +329,13 @@ export function ProjectDetailPage() {
                       </Td>
                       <Td className="font-mono text-micro break-all text-fg-muted">
                         {profile.artifact_patterns.length > 0 ? profile.artifact_patterns.join(', ') : '—'}
+                      </Td>
+                      <Td>
+                        {profile.auto_submit ? (
+                          <StatusText tone="success">Automático</StatusText>
+                        ) : (
+                          <StatusText>Desativado</StatusText>
+                        )}
                       </Td>
                       <Td>
                         {profile.is_active ? (

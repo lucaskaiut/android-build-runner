@@ -15,6 +15,7 @@
     "api_timeout_seconds": 30,
     "api_retry_max": 5,
     "complete_retry_max": 10,
+    "submit_timeout_seconds": 900,
     "use_system_proxy": false,
     "git_ssh_command": "",
     "extra_headers": {},

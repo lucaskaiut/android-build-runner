@@ -96,6 +96,10 @@ class BuildClaimController extends Controller
                 'artifact_patterns' => $profile->artifact_patterns ?? [],
                 'env' => $profile->env ?? (object) [],
                 'parameters' => $profile->parameterDefinitions(),
+                'auto_submit' => (bool) $profile->auto_submit,
+                'submit_config' => $profile->auto_submit
+                    ? ($profile->submit_config ?? (object) [])
+                    : null,
             ],
             'script' => $profile->build_script,
             'working_directory' => $profile->effectiveWorkingDirectory($project),

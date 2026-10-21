@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\BuildStatus;
+use App\Enums\SubmitStatus;
 use App\Models\Build;
+use App\Models\BuildProfile;
+use App\Models\Project;
 use App\Models\Runner;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -28,6 +31,27 @@ class BuildCancellationTest extends TestCase
         $this->assertSame(BuildStatus::Cancelled, $build->status);
         $this->assertNotNull($build->finished_at);
         $this->assertSame(0, $build->duration_ms);
+    }
+
+    public function test_queued_auto_submit_build_is_marked_as_skipped_when_cancelled(): void
+    {
+        Sanctum::actingAs(User::factory()->admin()->create());
+
+        $project = Project::factory()->create();
+        $profile = BuildProfile::factory()->withAutoSubmit()->create(['project_id' => $project->id]);
+        $build = Build::factory()->create([
+            'project_id' => $project->id,
+            'build_profile_id' => $profile->id,
+            'submit_status' => SubmitStatus::Pending,
+        ]);
+
+        $this->postJson('/api/v1/builds/'.$build->id.'/cancel')
+            ->assertOk()
+            ->assertJsonPath('build.status', 'cancelled');
+
+        $build->refresh();
+        $this->assertSame(SubmitStatus::Skipped, $build->submit_status);
+        $this->assertNotNull($build->submitted_at);
     }
 
     public function test_running_build_receives_a_pending_cancel_flag(): void

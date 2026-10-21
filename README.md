@@ -7,7 +7,7 @@ nativo iniciando todas as conexões de saída.
 O fluxo é semelhante, em escopo reduzido, ao EAS Build / Vercel:
 
 **cadastro de projeto → build manual (ou webhook) → execução real no Windows →
-logs em tempo real → resultado → download do artefato.**
+logs em tempo real → resultado → download do artefato → submit opcional para a loja.**
 
 ## Arquitetura
 
@@ -236,6 +236,55 @@ repositório/branch não configurados, idempotência por `X-GitHub-Delivery`
 (entregas repetidas não geram builds duplicadas, apenas incrementam o contador
 de reentrega), e o payload nunca altera scripts ou configurações.
 
+## Submit automático (Google Play)
+
+Perfis podem enviar o AAB automaticamente após uma build bem-sucedida, de forma
+semelhante ao `--auto-submit` do EAS.
+
+1. Cadastre o JSON da service account como **arquivo secreto** do projeto
+   (ex.: `credentials.json`). O mesmo JSON usado pelo EAS Submit pode ser
+   reutilizado; não é necessário cadastrar a chave no perfil.
+2. No perfil, marque **Enviar para a loja automaticamente** e informe:
+   - package name (ex.: `com.noxsolucoes.webrasterapp`);
+   - track (ex.: `alpha`, `beta`, `internal` ou uma track customizada);
+   - caminho relativo do arquivo secreto da service account;
+   - padrão do AAB (normalmente
+     `android/app/build/outputs/bundle/release/*.aab`);
+   - status do release: `completed` (rollout) ou `draft`.
+3. Após o script terminar com sucesso, o runner localiza o AAB, autentica na
+   Google Play Developer API, faz upload do bundle, associa-o à track e commita
+   a edição.
+4. O resultado fica registrado na build (`submit_status`, `submit_message`,
+   `submit_version_code` e `submitted_at`), inclusive quando a build em si
+   falha ou é cancelada (`skipped`).
+
+A service account precisa estar adicionada em **Play Console → Users and
+permissions** com permissão para gerenciar a track usada (por exemplo,
+**Manage testing tracks** / **Release to testing tracks**). O JSON continua
+criptografado no banco e é entregue apenas ao runner que reivindicou a build.
+
+> Requer runner **0.2.0** ou superior. Runners antigos não executam o passo de
+> submit e a build aparecerá com `submit_status=failed` quando o perfil tiver
+> submit automático habilitado. Na API, rode `php artisan migrate` para criar
+> as colunas do perfil e da build.
+
+O runner usa o helper `runner/scripts/google-play-submit.js` (Node.js, sem
+dependências externas). Para validar a credencial sem publicar nada:
+
+```powershell
+# runner/config/submit-check.json:
+# { "serviceAccount": "C:\\caminho\\credentials.json", "packageName": "com.exemplo.app" }
+node scripts\google-play-submit.js --config config\submit-check.json --check
+```
+
+Limitações atuais:
+
+- somente Google Play e Android App Bundle (`.aab`);
+- o tempo do upload é controlado por `submit_timeout_seconds` no runner
+  (padrão `900`);
+- se a conta usar **Managed publishing**, a release pode ficar aguardando
+  publicação manual no Play Console mesmo após o commit da API.
+
 ## Operação
 
 ```bash
@@ -276,7 +325,7 @@ powershell -ExecutionPolicy Bypass -File runner\tests\run-tests.ps1
 cd web && npm test && npm run build && npm run lint
 ```
 
-Status atual: 91 testes de backend, 28 do runner e 12 do frontend aprovados.
+Status atual: 103 testes de backend, 37 do runner (Windows) e 14 do frontend aprovados.
 
 ## Segurança
 
@@ -289,6 +338,9 @@ Status atual: 91 testes de backend, 28 do runner e 12 do frontend aprovados.
   `credentials.json`) são criptografados no banco com `APP_KEY`, write-only no
   painel (o valor nunca é retornado pela API) e entregues apenas ao runner que
   reivindicou a build; os valores das variáveis são mascarados nos logs.
+- O submit automático usa um arquivo secreto do projeto e guarda apenas o
+  caminho relativo, o package name e a track no perfil; o conteúdo da service
+  account nunca aparece nos logs ou nas respostas da API.
 - Webhooks validados por HMAC, com idempotência no banco.
 - Artefatos: caminhos gerados pela API, validação de contenção, download
   autorizado e nunca expostos como diretório estático.

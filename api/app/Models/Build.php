@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BuildSource;
 use App\Enums\BuildStatus;
+use App\Enums\SubmitStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +20,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'branch',
     'commit_sha',
     'status',
+    'submit_status',
+    'submit_message',
+    'submit_version_code',
+    'submitted_at',
     'runner_id',
     'parameters',
     'queued_at',
@@ -45,6 +50,8 @@ class Build extends Model
         return [
             'source' => BuildSource::class,
             'status' => BuildStatus::class,
+            'submit_status' => SubmitStatus::class,
+            'submitted_at' => 'datetime',
             'parameters' => 'array',
             'queued_at' => 'datetime',
             'claimed_at' => 'datetime',

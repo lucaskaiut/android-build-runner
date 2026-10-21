@@ -29,6 +29,8 @@ class BuildProfileFactory extends Factory
             'env' => [],
             'parameters' => [],
             'is_active' => true,
+            'auto_submit' => false,
+            'submit_config' => null,
         ];
     }
 
@@ -40,5 +42,21 @@ class BuildProfileFactory extends Factory
     public function withArtifactPatterns(array $patterns): static
     {
         return $this->state(fn () => ['artifact_patterns' => $patterns]);
+    }
+
+    public function withAutoSubmit(array $config = []): static
+    {
+        return $this->state(fn () => [
+            'auto_submit' => true,
+            'submit_config' => array_merge([
+                'provider' => 'google_play',
+                'package_name' => 'com.example.app',
+                'track' => 'alpha',
+                'service_account_file' => 'credentials.json',
+                'artifact_pattern' => 'android/app/build/outputs/bundle/release/*.aab',
+                'release_status' => 'completed',
+                'release_name' => null,
+            ], $config),
+        ]);
     }
 }

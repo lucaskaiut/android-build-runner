@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\BuildSource;
 use App\Enums\BuildStatus;
+use App\Enums\SubmitStatus;
 use App\Models\Build;
 use App\Models\BuildProfile;
 use App\Models\GithubWebhookDelivery;
@@ -74,6 +75,7 @@ class BuildService
             'commit_sha' => $commitSha,
             'parameters' => $parameters === [] ? null : $parameters,
             'webhook_delivery_id' => $delivery?->id,
+            'submit_status' => $profile->auto_submit ? SubmitStatus::Pending : null,
         ]);
         $build->status = BuildStatus::Queued;
         $build->queued_at = now();

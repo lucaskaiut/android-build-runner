@@ -41,6 +41,18 @@ function New-BuildContext {
         }
     }
 
+    $autoSubmit = $false
+    $autoSubmitProperty = $Build.profile.PSObject.Properties['auto_submit']
+    if ($autoSubmitProperty -and $null -ne $autoSubmitProperty.Value) {
+        $autoSubmit = [bool]$autoSubmitProperty.Value
+    }
+
+    $submitConfig = $null
+    $submitConfigProperty = $Build.profile.PSObject.Properties['submit_config']
+    if ($submitConfigProperty -and $null -ne $submitConfigProperty.Value) {
+        $submitConfig = $submitConfigProperty.Value
+    }
+
     $secretFiles = New-Object System.Collections.ArrayList
     $secretFilesProperty = $Build.PSObject.Properties['secret_files']
     if ($secretFilesProperty -and $null -ne $secretFilesProperty.Value -and $secretFilesProperty.Value -isnot [string]) {
@@ -67,11 +79,15 @@ function New-BuildContext {
         Script = [string]$Build.script
         ProfileEnv = $Build.profile.env
         TimeoutSeconds = [int]$Build.profile.timeout_seconds
+        AutoSubmit = $autoSubmit
+        SubmitConfig = $submitConfig
         Workspace = $workspace
         AppDir = $appDir
         RunnerDir = $runnerDir
         StdoutPath = (Join-Path $runnerDir 'stdout.log')
         StderrPath = (Join-Path $runnerDir 'stderr.log')
+        SubmitStdoutPath = (Join-Path $runnerDir 'submit.stdout.log')
+        SubmitStderrPath = (Join-Path $runnerDir 'submit.stderr.log')
         ScriptPath = (Join-Path $runnerDir 'build.ps1')
         RunStatePath = (Join-Path $runnerDir 'run.json')
         ResolvedSha = $null

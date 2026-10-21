@@ -30,6 +30,7 @@ class BuildProfileController extends Controller
     public function store(SaveBuildProfileRequest $request, Project $project): JsonResponse
     {
         $data = $request->validated();
+        $autoSubmit = (bool) ($data['auto_submit'] ?? false);
 
         $profile = new BuildProfile([
             ...$data,
@@ -40,6 +41,8 @@ class BuildProfileController extends Controller
             'parameters' => $data['parameters'] ?? [],
             'is_active' => $data['is_active'] ?? true,
             'working_directory' => $data['working_directory'] ?? null,
+            'auto_submit' => $autoSubmit,
+            'submit_config' => $autoSubmit ? ($data['submit_config'] ?? null) : null,
         ]);
         $profile->save();
 
@@ -55,10 +58,27 @@ class BuildProfileController extends Controller
     {
         $data = $request->validated();
 
-        $tracked = ['name', 'slug', 'working_directory', 'timeout_seconds', 'artifact_patterns', 'env', 'parameters', 'is_active', 'build_script'];
+        $tracked = [
+            'name', 'slug', 'working_directory', 'timeout_seconds', 'artifact_patterns',
+            'env', 'parameters', 'is_active', 'auto_submit', 'submit_config', 'build_script',
+        ];
         $before = $profile->only($tracked);
 
-        $profile->fill($data)->save();
+        $autoSubmit = array_key_exists('auto_submit', $data)
+            ? (bool) $data['auto_submit']
+            : (bool) $profile->auto_submit;
+        $previousSubmitConfig = $profile->submit_config;
+
+        $profile->fill($data);
+
+        if (! $autoSubmit) {
+            $profile->submit_config = null;
+        } elseif (empty($profile->submit_config) && ! empty($previousSubmitConfig)) {
+            // Partial updates that omit the config must not erase it.
+            $profile->submit_config = $previousSubmitConfig;
+        }
+
+        $profile->save();
 
         $changed = array_keys(array_diff_assoc(
             array_map(fn ($value) => is_array($value) ? json_encode($value) : (string) $value, $before),

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { AlertTriangle, Download, FileArchive, XOctagon } from 'lucide-react'
-import { BuildStatusBadge } from '@/components/StatusBadge'
+import { BuildStatusBadge, SubmitStatusBadge } from '@/components/StatusBadge'
 import {
   Button,
   buttonClass,
@@ -199,6 +199,29 @@ export function BuildDetailPage() {
           </div>
         ) : null}
       </Card>
+
+      {build.submit_status ? (
+        <Card
+          title="Submit para a loja"
+          description="Resultado do envio automático do AAB para a Google Play."
+        >
+          <MetaList className="sm:grid-cols-2 lg:grid-cols-4">
+            <MetaItem label="Status">
+              <SubmitStatusBadge status={build.submit_status} label={build.submit_status_label ?? undefined} />
+            </MetaItem>
+            <MetaItem label="Version code" mono>
+              {build.submit_version_code ?? '—'}
+            </MetaItem>
+            <MetaItem label="Concluído em">{formatDateTime(build.submitted_at)}</MetaItem>
+          </MetaList>
+
+          {build.submit_message ? (
+            <p className="mt-4 border-t border-line pt-3.5 text-body break-words text-fg-muted">
+              {build.submit_message}
+            </p>
+          ) : null}
+        </Card>
+      ) : null}
 
       <Card
         title={`Artefatos${artifacts.length > 0 ? ` · ${artifacts.length}` : ''}`}

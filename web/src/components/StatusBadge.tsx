@@ -1,6 +1,6 @@
 import { cn } from '@/lib/cn'
 import { Badge, type SemanticTone } from '@/components/ui'
-import type { BuildStatus, RunnerStatus, WebhookStatus } from '@/lib/types'
+import type { BuildStatus, RunnerStatus, SubmitStatus, WebhookStatus } from '@/lib/types'
 
 /**
  * Estados compartilham a mesma linguagem em todo o painel:
@@ -41,6 +41,23 @@ export function BuildStatusBadge({ status, label }: { status: BuildStatus; label
       tone={buildStatusTone[status] ?? 'neutral'}
       label={label ?? status}
       pulse={status === 'running'}
+    />
+  )
+}
+
+const submitStatusTone: Record<SubmitStatus, SemanticTone> = {
+  pending: 'info',
+  success: 'success',
+  failed: 'danger',
+  skipped: 'warning',
+}
+
+export function SubmitStatusBadge({ status, label }: { status: SubmitStatus; label?: string }) {
+  return (
+    <StatusPill
+      tone={submitStatusTone[status] ?? 'neutral'}
+      label={label ?? status}
+      pulse={status === 'pending'}
     />
   )
 }

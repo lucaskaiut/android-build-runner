@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'env',
     'parameters',
     'is_active',
+    'auto_submit',
+    'submit_config',
 ])]
 class BuildProfile extends Model
 {
@@ -34,6 +36,8 @@ class BuildProfile extends Model
             'env' => 'array',
             'parameters' => 'array',
             'is_active' => 'boolean',
+            'auto_submit' => 'boolean',
+            'submit_config' => 'array',
             'timeout_seconds' => 'integer',
         ];
     }
