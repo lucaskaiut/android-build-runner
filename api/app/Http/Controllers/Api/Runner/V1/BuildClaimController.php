@@ -74,8 +74,6 @@ class BuildClaimController extends Controller
         $build->load(['project', 'profile']);
         $profile = $build->profile;
         $project = $build->project;
-        $submitConfig = is_array($build->submit_config) ? $build->submit_config : [];
-        $submitFile = trim((string) ($submitConfig['service_account_file'] ?? ''));
 
         return [
             'id' => $build->id,
@@ -109,7 +107,6 @@ class BuildClaimController extends Controller
             'secret_files' => $project->secretFiles()
                 ->orderBy('path')
                 ->get()
-                ->reject(fn (ProjectSecretFile $file) => $submitFile !== '' && $file->path === $submitFile)
                 ->map(fn (ProjectSecretFile $file) => [
                     'path' => $file->path,
                     'content_base64' => base64_encode($file->content),

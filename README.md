@@ -264,8 +264,9 @@ semelhante ao `--auto-submit` do EAS.
 A service account precisa estar adicionada em **Play Console → Users and
 permissions** com permissão para gerenciar a track usada (por exemplo,
 **Manage testing tracks** / **Release to testing tracks**). O JSON continua
-criptografado no banco, é lido pela API/scheduler e **não é entregue ao
-runner** quando o perfil tem submit automático.
+criptografado no banco e é lido pela API/scheduler para o submit. Ele também
+continua sendo entregue ao runner como arquivo secreto do projeto, porque o
+script de build pode precisar dele; quem faz o submit, porém, é a API.
 
 > Na API, rode `php artisan migrate` para criar as colunas do perfil e da build.
 
@@ -346,9 +347,10 @@ Status atual: 110 testes de backend, 28 do runner (Windows) e 14 do frontend apr
   mascarados nos logs.
 - O submit automático usa um arquivo secreto do projeto e guarda apenas o
   caminho relativo, o package name e a track no perfil. O scheduler da API
-  descriptografa somente esse arquivo no momento do submit e o omite do
-  payload entregue ao runner; o conteúdo da service account nunca aparece nos
-  logs ou nas respostas da API.
+  descriptografa esse arquivo no momento do submit; o conteúdo da service
+  account nunca aparece nos logs ou nas respostas da API. O arquivo continua
+  sendo entregue ao runner como os demais segredos do projeto, pois o script
+  de build pode precisar dele.
 - Webhooks validados por HMAC, com idempotência no banco.
 - Artefatos: caminhos gerados pela API, validação de contenção, download
   autorizado e nunca expostos como diretório estático.

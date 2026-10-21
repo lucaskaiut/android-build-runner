@@ -146,7 +146,7 @@ class ProjectSecretTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrors(['path']);
     }
 
-    public function test_runner_claim_omits_the_submit_service_account_file(): void
+    public function test_runner_claim_includes_the_submit_service_account_file(): void
     {
         $runner = Runner::factory()->withToken()->create();
         Sanctum::actingAs($runner, ['runner']);
@@ -161,10 +161,12 @@ class ProjectSecretTest extends TestCase
             'submit_config' => $profile->submit_config,
         ]);
 
-        foreach ([
+        $contents = [
             '.env' => 'EXPO_PUBLIC_API_URL=https://api.example.test',
             'credentials.json' => '{"type":"service_account","private_key":"secret"}',
-        ] as $path => $content) {
+        ];
+
+        foreach ($contents as $path => $content) {
             ProjectSecretFile::create([
                 'project_id' => $project->id,
                 'path' => $path,
@@ -176,9 +178,13 @@ class ProjectSecretTest extends TestCase
 
         $response = $this->postJson('/api/runner/v1/builds/claim')->assertOk();
 
-        $response->assertJsonCount(1, 'build.secret_files');
+        $response->assertJsonCount(2, 'build.secret_files');
         $response->assertJsonPath('build.secret_files.0.path', '.env');
-        $this->assertStringNotContainsString('service_account', $response->getContent());
+        $response->assertJsonPath('build.secret_files.1.path', 'credentials.json');
+        $this->assertSame(
+            $contents['credentials.json'],
+            base64_decode($response->json('build.secret_files.1.content_base64')),
+        );
     }
 
     public function test_runner_claim_payload_carries_project_secrets_and_files(): void
