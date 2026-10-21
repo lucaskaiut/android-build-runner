@@ -19,8 +19,9 @@ da cor de destaque — não de gradientes, sombras decorativas ou ilustrações.
 
 - Tema único **claro**, otimizado para uso diurno em estação de trabalho. O escuro é reservado
   ao terminal de logs, onde reduz o cansaço de leitura.
-- Ações primárias usam **tinta (grafite quase preto)**; o destaque **teal** é reservado para
-  interação, seleção, foco e atividade (links, aba ativa, item ativo da sidebar, build em execução).
+- **Violeta é a cor primária** (`#6d28d9`): botões primários, links, seleção, foco, aba/item
+  ativo da sidebar e atividade (build em execução). Aplicada em superfícies sólidas — sem
+  gradientes nem glow.
 - Latências: nenhuma animação decorativa. Transições de 100 ms para feedback; toasts com 140 ms.
 - `prefers-reduced-motion` é respeitado globalmente.
 
@@ -55,8 +56,7 @@ Definida em `web/src/index.css`. Tokens de cor geram utilitários Tailwind
 | Texto auxiliar | `--color-fg-subtle` | `#626b78` |
 | Linhas funcionais | `--color-line` | `#e4e8ea` |
 | Borda de controles | `--color-line-strong` | `#ccd3d8` |
-| Tinta (ação primária) | `--color-ink` / `--color-ink-hover` | `#23272c` / `#14171a` |
-| Destaque | `--color-accent` / `--color-accent-hover` / `--color-accent-soft` | `#0f766e` / `#115e59` / `#e7f5f2` |
+| Primária (destaque) | `--color-accent` / `--color-accent-hover` / `--color-accent-soft` | `#6d28d9` / `#5b21b6` / `#f1edfd` |
 | Sucesso | `--color-success` / `--color-success-soft` | `#15803d` / `#edfaf1` |
 | Falha | `--color-danger` / `--color-danger-hover` / `--color-danger-soft` | `#b91c1c` / `#991b1b` / `#fdf0f0` |
 | Aviso | `--color-warning` / `--color-warning-soft` | `#b45309` / `#fdf7ea` |
@@ -151,8 +151,8 @@ Não aplique sombra em botões, inputs, linhas de tabela, badges ou na sidebar.
 
 Use `Card` (`web/src/components/ui.tsx`) somente quando existir um grupo de conteúdo
 independente que precise de superfície própria (tabela, formulário, painel de logs,
-resumo de execução). Justificativas aceitas: agrupar conteúdo relacionado, isolar área de
-interação, destacar informação.
+resumo de execução, indicador operacional). Justificativas aceitas: agrupar conteúdo
+relacionado, isolar área de interação, destacar informação.
 
 Um card deve ser definido por **contraste + `shadow-card`**, sem borda externa. O único
 divisor permitido dentro de um card é o `border-b border-line` entre cabeçalho e corpo
@@ -192,15 +192,18 @@ Exemplo incorreto — cada linha vira um card, cada campo vira um card:
 Componentes: `TableShell`, `Th`, `Td`.
 
 - Cabeçalho: `h-9`, `bg-inset`, `text-meta font-medium text-fg-subtle`, sem caixa alta.
-- Linha: `px-3 py-2`, ~36 px de altura, `text-body`, divisor apenas inferior
+- Linha: `px-3 py-2.5`, ~40 px de altura, `text-body`, divisor apenas inferior
   (`border-b border-line`); a última linha não tem divisor (regra global em `index.css`).
 - Hover de linha: `hover:bg-fill-hover/60` quando a linha é navegável.
 - Alinhamento: texto à esquerda, números/datas à direita com `tabular-nums`.
 - Colunas técnicas (SHAs, paths, branches) em `font-mono text-meta`.
 - Ações por linha: `IconButton` (com `label`) à direita — nunca botões de texto repetidos.
 - Paginação fica no rodapé do mesmo card, separada por `border-t border-line`.
-- Estado vazio usa `EmptyState` dentro do card; erro usa `ErrorState`; carregamento usa
-  `LoadingBlock`. Nunca renderize uma tabela vazia sem mensagem.
+- Estado vazio usa `EmptyState` dentro do card (com ação de continuidade quando existir); erro usa
+  `ErrorState`; carregamento de listagens usa `TableSkeleton` (nunca uma tabela vazia sem mensagem).
+- Carregamento preserva a estrutura da tela: `TableSkeleton` para tabelas, `Skeleton` para
+  cartões, formulários e páginas de detalhe. Spinner fica reservado a botões e autenticação —
+  não substitua a página inteira por um spinner quando for possível esqueletizar o layout.
 - Tabelas têm `overflow-x-auto`; em telas pequenas a rolagem é horizontal, sem esconder colunas.
 
 ## 11. Componentes compartilhados
@@ -217,7 +220,9 @@ Todos em `web/src/components/`:
 | `Tabs` | Navegação por abas com teclado (setas) e `aria-selected` |
 | `MetaList`, `MetaItem` | Dicionário de metadados (label → valor) |
 | `TableShell`, `Th`, `Td` | Tabelas de dados |
-| `Spinner`, `LoadingBlock`, `EmptyState`, `ErrorState` | Estados de tela |
+| `Spinner`, `Skeleton`, `TableSkeleton` | Carregamento (botões, cartões, tabelas) |
+| `EmptyState`, `ErrorState` | Estados vazios e de erro (título derivado do status HTTP) |
+| `MenuButton` | Menu de ações contextuais (role=menu, setas, Esc, clique fora) |
 | `Pagination` | Navegação de páginas compacta |
 | `Modal`, `ConfirmDialog` | Overlay nível 3 com Esc, foco e bloqueio de scroll |
 | `ToastProvider`, `useToast` | Notificações transitórias (`aria-live`) |
@@ -227,11 +232,20 @@ Todos em `web/src/components/`:
 Antes de criar um componente, verifique se um destes já resolve (com variante nova, se fizer
 sentido). Não duplique `Button`/`Card`/tabela em uma feature.
 
+Notas de uso:
+
+- **Indicadores do dashboard** são links para a listagem filtrada correspondente
+  (`/builds?status=...`); nunca crie indicador clicável sem destino real.
+- **MenuButton** agrupa ações secundárias ou perigosas (ex.: desativar/remover projeto). Ações
+  frequentes permanecem visíveis como botões.
+- **Erros de tela** derivam o título do status HTTP (`404` → "Não encontrado", `403` →
+  "Sem permissão", `5xx` → "Erro no servidor", falha de rede → "Falha de comunicação").
+
 ## 12. Variantes de botões
 
 | Variante | Aparência | Uso |
 | --- | --- | --- |
-| `primary` | Fundo `ink`, texto branco | Ação principal da tela (uma por região) |
+| `primary` | Fundo `accent` (violeta), texto branco | Ação principal da tela (uma por região) |
 | `secondary` | Superfície + borda `line-strong` | Ações de apoio, download, cancelar |
 | `ghost` | Sem fundo, texto `fg-muted` | Ações terciárias, "limpar filtros" |
 | `danger` | Fundo `danger`, texto branco | Ação destrutiva confirmada |
@@ -251,7 +265,7 @@ Um mesmo estado tem a mesma apresentação em todo o painel (`StatusBadge.tsx`):
 | --- | --- | --- | --- |
 | neutro | `queued` | `offline` | — |
 | `info` | `preparing` | — | `duplicate` |
-| `accent` (teal, pulsa em execução) | `running` | — | — |
+| `accent` (violeta, pulsa em execução) | `running` | — | — |
 | `success` | `success` | `online` | `accepted` |
 | `danger` | `failed` | `disabled` | `rejected`, `error` |
 | `warning` | `cancelled` | — | `ignored` |
@@ -261,7 +275,9 @@ Estado booleano (projeto/perfil ativo) usa `StatusText`, não uma badge.
 
 ## 14. Responsividade
 
-- **Desktop largo:** sidebar fixa de `232px`; conteúdo centralizado em até `1280px`.
+- **Desktop largo:** sidebar de `232px`, recolhível para `60px` (preferência persistida em
+  `localStorage`); no modo recolhido os rótulos viram `sr-only` e cada item expõe `title`.
+  Conteúdo centralizado em até `1280px`.
 - **Notebook/tablet:** mesmos componentes; grids de formulário passam de 2–3 colunas para 1.
 - **Mobile (`< md`):** a sidebar vira cabeçalho com marca + navegação horizontal rolável;
   ações de página quebram linha (`flex-wrap`); tabelas rolam horizontalmente; modais ocupam
@@ -292,13 +308,16 @@ Estado booleano (projeto/perfil ativo) usa `StatusText`, não uma badge.
 - Gradientes decorativos, glow, ilustrações abstratas, emojis como ícones.
 - Ícone dentro de quadrado/círculo colorido sem função.
 - Badge colorida para nome, data, identificador ou metadata.
-- Quatro (ou sete) cards idênticos de estatística com número gigante e label minúsculo.
+- Quatro (ou sete) cards idênticos de estatística com ícone dentro de quadrado colorido,
+  número gigante, label minúsculo e variação percentual inventada. Métricas reais em cards
+  separados, com ícone direto e número proporcional, são aceitáveis.
 - Números/variações percentuais inventados.
 - Grafos sem pergunta operacional.
 - `rounded-xl/2xl` em tabelas, sidebar ou regiões grandes.
 - `font-bold` e títulos enormes para dar ênfase.
 - Espaçamento de landing page, hero, frase de marketing.
 - Animações de bounce/escala; skeleton chamativo.
+- Spinner de página inteira quando um skeleton preserva a estrutura da tela.
 - Componente duplicado com pequenas variações entre páginas.
 - Elemento sem função (busca global vazia, sino sem notificação, avatar decorativo).
 
@@ -309,11 +328,14 @@ Estado booleano (projeto/perfil ativo) usa `StatusText`, não uma badge.
 ```tsx
 <PageHeader title="Dashboard" description="1 projeto · 1 ativo · 0/1 runner online" … />
 
-{/* Uma única superfície com divisores internos, não um card por métrica */}
-<div className="grid grid-cols-2 gap-px overflow-hidden rounded-surface bg-line shadow-card sm:grid-cols-3 lg:grid-cols-6">
-  <div className="bg-surface px-4 py-3">
-    <p className="text-meta text-fg-subtle">Executando</p>
-    <p className="mt-0.5 text-xl font-semibold tabular-nums text-accent">2</p>
+{/* Uma métrica por card, com ícone direto e dado real — sem quadrado colorido */}
+<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+  <div className="rounded-surface bg-surface p-3.5 shadow-card">
+    <div className="flex items-center gap-1.5 text-accent">
+      <Play className="size-3.5 shrink-0" aria-hidden />
+      <p className="truncate text-meta">Executando</p>
+    </div>
+    <p className="mt-2 text-xl font-semibold tabular-nums text-accent">2</p>
   </div>
   …
 </div>

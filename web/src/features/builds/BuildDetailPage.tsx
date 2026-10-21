@@ -9,10 +9,10 @@ import {
   Card,
   ConfirmDialog,
   ErrorState,
-  LoadingBlock,
   MetaItem,
   MetaList,
   PageHeader,
+  Skeleton,
   TableShell,
   Td,
   Th,
@@ -24,6 +24,46 @@ import { LogViewer } from './LogViewer'
 import type { Build } from '@/lib/types'
 
 const activeStatuses = ['queued', 'preparing', 'running']
+
+function BuildDetailSkeleton() {
+  return (
+    <div className="flex flex-col gap-5" role="status" aria-label="Carregando build">
+      <div>
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="mt-2.5 h-5 w-36" />
+        <Skeleton className="mt-2.5 h-3 w-72" />
+      </div>
+
+      <div className="rounded-surface bg-surface shadow-card">
+        <div className="border-b border-line px-4 py-3">
+          <Skeleton className="h-4 w-24" />
+        </div>
+        <div className="grid gap-x-8 gap-y-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 11 }).map((_, index) => (
+            <div key={index}>
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="mt-2 h-4 w-28" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-surface bg-surface shadow-card">
+        <div className="border-b border-line px-4 py-3">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="mt-2 h-3 w-64" />
+        </div>
+        <div className="flex flex-col gap-3 p-4">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+      </div>
+
+      <span className="sr-only">Carregando…</span>
+    </div>
+  )
+}
 
 export function BuildDetailPage() {
   const params = useParams()
@@ -58,9 +98,9 @@ export function BuildDetailPage() {
     onError: (error) => toast.error('Falha ao cancelar', apiErrorMessage(error)),
   })
 
-  if (buildQuery.isLoading) return <LoadingBlock />
+  if (buildQuery.isLoading) return <BuildDetailSkeleton />
   if (buildQuery.isError || !buildQuery.data) {
-    return <ErrorState message={apiErrorMessage(buildQuery.error)} onRetry={() => buildQuery.refetch()} />
+    return <ErrorState error={buildQuery.error} onRetry={() => buildQuery.refetch()} />
   }
 
   const build: Build = buildQuery.data.build

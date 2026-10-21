@@ -7,14 +7,37 @@ import {
   Card,
   Field,
   Input,
-  LoadingBlock,
   PageHeader,
   Select,
+  Skeleton,
 } from '@/components/ui'
 import { useToast } from '@/components/toast'
 import { api, apiErrorMessage, ApiError } from '@/lib/api'
 
 type RefType = 'branch' | 'commit'
+
+function BuildNewSkeleton() {
+  return (
+    <div className="mx-auto flex max-w-2xl flex-col gap-5" role="status" aria-label="Carregando formulário">
+      <div>
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="mt-2.5 h-5 w-36" />
+        <Skeleton className="mt-2.5 h-3 w-80" />
+      </div>
+      <div className="rounded-surface bg-surface shadow-card">
+        <div className="flex flex-col gap-5 p-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+          </div>
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-8 w-full" />
+        </div>
+      </div>
+      <span className="sr-only">Carregando…</span>
+    </div>
+  )
+}
 
 export function BuildNewPage() {
   const [searchParams] = useSearchParams()
@@ -94,7 +117,7 @@ export function BuildNewPage() {
     profileId !== '' &&
     (refType === 'branch' ? branch.trim() !== '' : /^[0-9a-fA-F]{40}$/.test(commitSha.trim()))
 
-  if (projectsQuery.isLoading) return <LoadingBlock />
+  if (projectsQuery.isLoading) return <BuildNewSkeleton />
 
   if ((projectsQuery.data?.data.length ?? 0) === 0) {
     return (

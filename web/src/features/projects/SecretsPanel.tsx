@@ -9,6 +9,7 @@ import {
   IconButton,
   Input,
   Modal,
+  Skeleton,
   TableShell,
   Td,
   Th,
@@ -107,7 +108,13 @@ export function SecretsPanel({ projectId }: { projectId: number }) {
         <div>
           <p className="text-body font-semibold text-fg">Variáveis de ambiente</p>
 
-          {secrets.length === 0 ? (
+          {secretsQuery.isLoading ? (
+            <div className="mt-2 flex flex-col gap-2" role="status" aria-label="Carregando segredos">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <Skeleton key={index} className="h-8 w-full" />
+              ))}
+            </div>
+          ) : secrets.length === 0 ? (
             <p className="mt-2 rounded-control bg-inset px-3 py-3 text-center text-meta text-fg-subtle">
               Nenhuma variável configurada. Elas são injetadas no ambiente do script e mascaradas nos logs.
             </p>
@@ -187,7 +194,13 @@ export function SecretsPanel({ projectId }: { projectId: number }) {
             <code>credentials/android/keystore.jks</code>. O arquivo é gravado no workspace a cada build.
           </p>
 
-          {secretFiles.length === 0 ? (
+          {secretsQuery.isLoading ? (
+            <div className="mt-2 flex flex-col gap-2" role="status" aria-label="Carregando arquivos">
+              {Array.from({ length: 2 }).map((_, index) => (
+                <Skeleton key={index} className="h-8 w-full" />
+              ))}
+            </div>
+          ) : secretFiles.length === 0 ? (
             <p className="mt-2 rounded-control bg-inset px-3 py-3 text-center text-meta text-fg-subtle">
               Nenhum arquivo secreto configurado.
             </p>

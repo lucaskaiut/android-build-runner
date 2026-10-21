@@ -36,14 +36,10 @@
   --color-line: #e4e8ea;
   --color-line-strong: #ccd3d8;
 
-  /* Tinta — ações primárias */
-  --color-ink: #23272c;
-  --color-ink-hover: #14171a;
-
-  /* Destaque — interação, seleção, foco, atividade */
-  --color-accent: #0f766e;
-  --color-accent-hover: #115e59;
-  --color-accent-soft: #e7f5f2;
+  /* Primária — ações, interação, seleção, foco e atividade */
+  --color-accent: #6d28d9;
+  --color-accent-hover: #5b21b6;
+  --color-accent-soft: #f1edfd;
 
   /* Estados semânticos */
   --color-success: #15803d;
@@ -104,7 +100,7 @@
   }
 
   ::selection {
-    background: #cdeae4;
+    background: #ddd6fe;
     color: var(--color-fg);
   }
 

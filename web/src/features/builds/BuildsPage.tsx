@@ -11,12 +11,12 @@ import {
   ErrorState,
   Field,
   Input,
-  LoadingBlock,
   PageHeader,
   Pagination,
   Select,
+  TableSkeleton,
 } from '@/components/ui'
-import { api, apiErrorMessage } from '@/lib/api'
+import { api } from '@/lib/api'
 
 const statusOptions = [
   { value: '', label: 'Todos os estados' },
@@ -141,9 +141,9 @@ export function BuildsPage() {
 
       <Card bodyClassName="p-0">
         {buildsQuery.isLoading ? (
-          <LoadingBlock />
+          <TableSkeleton rows={9} columns={8} />
         ) : buildsQuery.isError ? (
-          <ErrorState message={apiErrorMessage(buildsQuery.error)} onRetry={() => buildsQuery.refetch()} />
+          <ErrorState error={buildsQuery.error} onRetry={() => buildsQuery.refetch()} />
         ) : (buildsQuery.data?.data.length ?? 0) === 0 ? (
           <EmptyState
             title="Nenhuma build encontrada"

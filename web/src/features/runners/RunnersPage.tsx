@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { RunnerStatusBadge } from '@/components/StatusBadge'
-import { Card, EmptyState, ErrorState, LoadingBlock, PageHeader, TableShell, Td, Th } from '@/components/ui'
-import { api, apiErrorMessage } from '@/lib/api'
+import { Card, EmptyState, ErrorState, PageHeader, TableShell, TableSkeleton, Td, Th } from '@/components/ui'
+import { api } from '@/lib/api'
 import { formatDateTime, formatRelative } from '@/lib/format'
 
 export function RunnersPage() {
@@ -28,9 +28,9 @@ export function RunnersPage() {
 
       <Card bodyClassName="p-0">
         {isLoading ? (
-          <LoadingBlock />
+          <TableSkeleton rows={3} columns={6} />
         ) : isError ? (
-          <ErrorState message={apiErrorMessage(error)} onRetry={() => refetch()} />
+          <ErrorState error={error} onRetry={() => refetch()} />
         ) : runners.length === 0 ? (
           <EmptyState
             title="Nenhum runner registrado"

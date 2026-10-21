@@ -10,13 +10,15 @@ import {
   EmptyState,
   ErrorState,
   IconButton,
-  LoadingBlock,
+  MenuButton,
   MetaItem,
   MetaList,
   PageHeader,
   Pagination,
+  Skeleton,
   StatusText,
   TableShell,
+  TableSkeleton,
   Tabs,
   Td,
   Th,
@@ -39,6 +41,47 @@ const tabs = [
 ] as const
 
 type TabId = (typeof tabs)[number]['id']
+
+function ProjectDetailSkeleton() {
+  return (
+    <div className="flex flex-col gap-4" role="status" aria-label="Carregando projeto">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="mt-2.5 h-5 w-44" />
+          <Skeleton className="mt-2.5 h-3 w-72" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-8 w-9" />
+        </div>
+      </div>
+
+      <div className="flex gap-3 border-b border-line pb-2">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <Skeleton key={index} className="h-6 w-20" />
+        ))}
+      </div>
+
+      <div className="rounded-surface bg-surface shadow-card">
+        <div className="border-b border-line px-4 py-3">
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="grid gap-x-8 gap-y-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div key={index}>
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-2 h-4 w-32" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <span className="sr-only">Carregando…</span>
+    </div>
+  )
+}
 
 export function ProjectDetailPage() {
   const params = useParams()
@@ -126,9 +169,9 @@ export function ProjectDetailPage() {
     onError: (error) => toast.error('Falha ao remover o perfil', apiErrorMessage(error)),
   })
 
-  if (projectQuery.isLoading) return <LoadingBlock />
+  if (projectQuery.isLoading) return <ProjectDetailSkeleton />
   if (projectQuery.isError || !projectQuery.data) {
-    return <ErrorState message={apiErrorMessage(projectQuery.error)} onRetry={() => projectQuery.refetch()} />
+    return <ErrorState error={projectQuery.error} onRetry={() => projectQuery.refetch()} />
   }
 
   const { project, profiles, branch_triggers: branchTriggers } = projectQuery.data
@@ -160,26 +203,31 @@ export function ProjectDetailPage() {
               <ButtonLink to={`/builds/new?project=${project.id}`}>
                 <Plus className="size-4" aria-hidden /> Nova build
               </ButtonLink>
-            ) : null}
-            {project.is_active ? (
-              <Button
-                variant="secondary"
-                onClick={() => setConfirmState({ type: 'deactivate-project' })}
-              >
-                <Power className="size-3.5" aria-hidden /> Desativar
-              </Button>
             ) : (
               <Button variant="secondary" onClick={() => setActive.mutate(true)} loading={setActive.isPending}>
                 <Power className="size-3.5" aria-hidden /> Ativar
               </Button>
             )}
-            <IconButton
-              label="Remover projeto"
-              tone="danger"
-              onClick={() => setConfirmState({ type: 'delete-project' })}
-            >
-              <Trash2 className="size-4" aria-hidden />
-            </IconButton>
+            <MenuButton
+              label="Mais ações do projeto"
+              items={[
+                ...(project.is_active
+                  ? [
+                      {
+                        label: 'Desativar projeto',
+                        icon: <Power className="size-3.5" aria-hidden />,
+                        onSelect: () => setConfirmState({ type: 'deactivate-project' }),
+                      },
+                    ]
+                  : []),
+                {
+                  label: 'Remover projeto',
+                  tone: 'danger' as const,
+                  icon: <Trash2 className="size-3.5" aria-hidden />,
+                  onSelect: () => setConfirmState({ type: 'delete-project' }),
+                },
+              ]}
+            />
           </>
         }
       />
@@ -251,6 +299,11 @@ export function ProjectDetailPage() {
               <EmptyState
                 title="Nenhum perfil configurado"
                 description="Crie um perfil com o script de build para executar builds deste projeto."
+                action={
+                  <Button size="sm" onClick={() => setProfileModal({ open: true, profile: null })}>
+                    <Plus className="size-3.5" aria-hidden /> Novo perfil
+                  </Button>
+                }
               />
             ) : (
               <TableShell>
@@ -338,7 +391,7 @@ export function ProjectDetailPage() {
             bodyClassName="p-0"
           >
             {buildsQuery.isLoading ? (
-              <LoadingBlock />
+              <TableSkeleton rows={6} columns={7} />
             ) : (buildsQuery.data?.data.length ?? 0) === 0 ? (
               <EmptyState
                 title="Nenhuma build executada"

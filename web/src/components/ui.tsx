@@ -1,6 +1,7 @@
 import {
   useEffect,
   useRef,
+  useState,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type KeyboardEvent,
@@ -9,8 +10,9 @@ import {
   type TextareaHTMLAttributes,
 } from 'react'
 import { Link } from 'react-router'
-import { AlertTriangle, ChevronLeft, ChevronRight, Loader2, X } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, ChevronRight, Ellipsis, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { ApiError, apiErrorMessage } from '@/lib/api'
 
 /* -------------------------------------------------------------------------- */
 /* Botões                                                                     */
@@ -23,7 +25,7 @@ const buttonBase =
   'focus-ring inline-flex shrink-0 select-none items-center justify-center gap-1.5 rounded-control font-medium transition-colors duration-100 disabled:pointer-events-none disabled:opacity-45'
 
 const buttonVariants: Record<ButtonVariant, string> = {
-  primary: 'bg-ink text-white hover:bg-ink-hover',
+  primary: 'bg-accent text-white hover:bg-accent-hover',
   secondary: 'border border-line-strong bg-surface text-fg hover:bg-fill-hover',
   ghost: 'text-fg-muted hover:bg-fill-hover hover:text-fg',
   danger: 'bg-danger text-white hover:bg-danger-hover',
@@ -423,6 +425,123 @@ export function Tabs({
 }
 
 /* -------------------------------------------------------------------------- */
+/* Menu contextual                                                            */
+/* -------------------------------------------------------------------------- */
+
+export interface MenuItem {
+  label: string
+  onSelect: () => void
+  tone?: 'default' | 'danger'
+  icon?: ReactNode
+  disabled?: boolean
+}
+
+export function MenuButton({
+  label,
+  items,
+  size = 'md',
+  className,
+}: {
+  label: string
+  items: MenuItem[]
+  size?: 'sm' | 'md'
+  className?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    const handleMouseDown = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false)
+        containerRef.current?.querySelector('button')?.focus()
+      }
+    }
+
+    const focusTimer = window.setTimeout(() => {
+      containerRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus()
+    }, 0)
+
+    document.addEventListener('mousedown', handleMouseDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.clearTimeout(focusTimer)
+      document.removeEventListener('mousedown', handleMouseDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  const handleMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    event.preventDefault()
+
+    const buttons = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)'),
+    )
+    const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
+    const next =
+      event.key === 'ArrowDown'
+        ? (index + 1) % buttons.length
+        : (index - 1 + buttons.length) % buttons.length
+    buttons[next]?.focus()
+  }
+
+  return (
+    <div ref={containerRef} className={cn('relative', className)}>
+      <IconButton
+        label={label}
+        size={size}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Ellipsis className="size-4" aria-hidden />
+      </IconButton>
+
+      {open ? (
+        <div
+          role="menu"
+          aria-label={label}
+          onKeyDown={handleMenuKeyDown}
+          className="absolute right-0 z-30 mt-1 min-w-44 rounded-overlay bg-surface p-1 shadow-overlay"
+        >
+          {items.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              role="menuitem"
+              disabled={item.disabled}
+              onClick={() => {
+                setOpen(false)
+                item.onSelect()
+              }}
+              className={cn(
+                'focus-ring flex h-8 w-full items-center gap-2 rounded-control px-2.5 text-left text-body transition-colors disabled:opacity-45',
+                item.tone === 'danger'
+                  ? 'text-danger hover:bg-danger-soft'
+                  : 'text-fg hover:bg-fill-hover',
+              )}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
 /* Tabelas                                                                    */
 /* -------------------------------------------------------------------------- */
 
@@ -457,7 +576,7 @@ export function Td({
   title?: string
 }) {
   return (
-    <td title={title} className={cn('border-b border-line px-3 py-2 align-middle', className)}>
+    <td title={title} className={cn('border-b border-line px-3 py-2.5 align-middle', className)}>
       {children}
     </td>
   )
@@ -473,14 +592,6 @@ export function Spinner({ className }: { className?: string }) {
       className={cn('size-4 animate-spin text-fg-subtle', className)}
       aria-label="Carregando"
     />
-  )
-}
-
-export function LoadingBlock({ label = 'Carregando…' }: { label?: string }) {
-  return (
-    <div className="flex items-center justify-center gap-2 py-12 text-body text-fg-muted">
-      <Spinner /> {label}
-    </div>
   )
 }
 
@@ -502,17 +613,86 @@ export function EmptyState({
   )
 }
 
-export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+export function ErrorState({
+  error,
+  message,
+  title,
+  onRetry,
+}: {
+  error?: unknown
+  message?: string
+  title?: string
+  onRetry?: () => void
+}) {
+  const status = error instanceof ApiError ? error.status : undefined
+  const derivedTitle =
+    title ??
+    (status === 404
+      ? 'Não encontrado'
+      : status === 403
+        ? 'Sem permissão'
+        : status && status >= 500
+          ? 'Erro no servidor'
+          : error !== undefined
+            ? 'Falha de comunicação'
+            : 'Não foi possível carregar os dados')
+
+  const derivedMessage = message ?? (error !== undefined ? apiErrorMessage(error) : 'Erro inesperado.')
+
   return (
-    <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+    <div role="alert" className="flex flex-col items-center gap-2 px-4 py-10 text-center">
       <AlertTriangle className="size-4 text-danger" aria-hidden />
-      <p className="text-body font-medium text-fg">Não foi possível carregar os dados</p>
-      <p className="max-w-lg text-meta text-fg-muted">{message}</p>
+      <p className="text-body font-medium text-fg">{derivedTitle}</p>
+      <p className="max-w-lg text-meta text-fg-muted">{derivedMessage}</p>
       {onRetry ? (
         <Button variant="secondary" size="sm" onClick={onRetry} className="mt-1.5">
           Tentar novamente
         </Button>
       ) : null}
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/* Skeletons                                                                  */
+/* -------------------------------------------------------------------------- */
+
+export function Skeleton({ className }: { className?: string }) {
+  return <span aria-hidden className={cn('block animate-pulse rounded-sm bg-fill-hover', className)} />
+}
+
+/** Tabela de carregamento que preserva a estrutura da listagem real. */
+export function TableSkeleton({ rows = 6, columns = 5 }: { rows?: number; columns?: number }) {
+  return (
+    <div role="status" aria-label="Carregando dados">
+      <TableShell>
+        <thead>
+          <tr>
+            {Array.from({ length: columns }).map((_, index) => (
+              <Th key={index}>
+                <Skeleton className="h-3 w-16" />
+              </Th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: rows }).map((_, rowIndex) => (
+            <tr key={rowIndex}>
+              {Array.from({ length: columns }).map((_, columnIndex) => (
+                <Td key={columnIndex}>
+                  <Skeleton
+                    className={cn(
+                      'h-3.5',
+                      columnIndex === 0 ? 'w-10' : columnIndex === 1 ? 'w-3/5' : 'w-4/5',
+                    )}
+                  />
+                </Td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </TableShell>
+      <span className="sr-only">Carregando…</span>
     </div>
   )
 }

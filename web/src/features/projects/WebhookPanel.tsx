@@ -9,10 +9,10 @@ import {
   Field,
   IconButton,
   Input,
-  LoadingBlock,
   Modal,
   Select,
   TableShell,
+  TableSkeleton,
   Td,
   Th,
 } from '@/components/ui'
@@ -248,7 +248,9 @@ export function WebhookPanel({
           </div>
 
           {deliveries.isLoading ? (
-            <LoadingBlock label="Carregando entregas…" />
+            <div className="mt-2 -mx-4">
+              <TableSkeleton rows={4} columns={5} />
+            </div>
           ) : (deliveries.data?.data.length ?? 0) === 0 ? (
             <EmptyState title="Nenhum evento recebido" description="Os eventos do GitHub aparecem aqui." />
           ) : (

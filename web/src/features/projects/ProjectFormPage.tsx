@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router'
 import { AlertTriangle } from 'lucide-react'
-import { Button, Card, ErrorState, Field, Input, LoadingBlock, PageHeader, Textarea } from '@/components/ui'
+import { Button, Card, ErrorState, Field, Input, PageHeader, Skeleton, Textarea } from '@/components/ui'
 import { useToast } from '@/components/toast'
 import { api, apiErrorMessage, ApiError, type ProjectInput } from '@/lib/api'
 
@@ -36,6 +36,32 @@ const schema = z.object({
 })
 
 type FormValues = z.infer<typeof schema>
+
+function ProjectFormSkeleton() {
+  return (
+    <div className="mx-auto flex max-w-2xl flex-col gap-5" role="status" aria-label="Carregando projeto">
+      <div>
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="mt-2.5 h-5 w-40" />
+        <Skeleton className="mt-2.5 h-3 w-80" />
+      </div>
+      <div className="rounded-surface bg-surface shadow-card">
+        <div className="flex flex-col gap-5 p-4">
+          {Array.from({ length: 3 }).map((_, sectionIndex) => (
+            <div key={sectionIndex} className="flex flex-col gap-3">
+              <Skeleton className="h-4 w-28" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <span className="sr-only">Carregando…</span>
+    </div>
+  )
+}
 
 function parseLines(value?: string): string[] {
   return (value ?? '')
@@ -121,9 +147,9 @@ export function ProjectFormPage() {
     }
   })
 
-  if (isEdit && projectQuery.isLoading) return <LoadingBlock />
+  if (isEdit && projectQuery.isLoading) return <ProjectFormSkeleton />
   if (isEdit && projectQuery.isError) {
-    return <ErrorState message={apiErrorMessage(projectQuery.error)} onRetry={() => projectQuery.refetch()} />
+    return <ErrorState error={projectQuery.error} onRetry={() => projectQuery.refetch()} />
   }
 
   const fieldError = (name: keyof FormValues) => {

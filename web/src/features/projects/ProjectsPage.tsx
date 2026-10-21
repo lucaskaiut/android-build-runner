@@ -9,16 +9,16 @@ import {
   EmptyState,
   ErrorState,
   Input,
-  LoadingBlock,
   PageHeader,
   Pagination,
   Select,
   StatusText,
   TableShell,
+  TableSkeleton,
   Td,
   Th,
 } from '@/components/ui'
-import { api, apiErrorMessage } from '@/lib/api'
+import { api } from '@/lib/api'
 import { formatRelative } from '@/lib/format'
 
 export function ProjectsPage() {
@@ -82,9 +82,9 @@ export function ProjectsPage() {
 
       <Card bodyClassName="p-0">
         {isLoading ? (
-          <LoadingBlock />
+          <TableSkeleton rows={8} columns={6} />
         ) : isError ? (
-          <ErrorState message={apiErrorMessage(error)} onRetry={() => refetch()} />
+          <ErrorState error={error} onRetry={() => refetch()} />
         ) : data && data.data.length === 0 ? (
           <EmptyState
             title="Nenhum projeto encontrado"
