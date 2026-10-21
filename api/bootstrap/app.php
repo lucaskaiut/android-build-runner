@@ -42,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('builds:reap')->everyMinute()->withoutOverlapping();
+        $schedule->command('builds:submit')->everyMinute()->runInBackground();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

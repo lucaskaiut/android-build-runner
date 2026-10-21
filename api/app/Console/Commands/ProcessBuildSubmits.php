@@ -8,6 +8,7 @@ use App\Models\Build;
 use App\Services\GooglePlaySubmitService;
 use App\Services\LogIngestService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
@@ -19,6 +20,28 @@ class ProcessBuildSubmits extends Command
     protected $description = 'Envia para a loja os builds bem-sucedidos com submit automático pendente';
 
     public function handle(
+        GooglePlaySubmitService $submitter,
+        LogIngestService $logs,
+    ): int {
+        $lock = Cache::lock(
+            'builds:submit',
+            max(120, (int) config('builds.submit_timeout_seconds', 900) + 120)
+        );
+
+        if (! $lock->get()) {
+            $this->info('Worker de submit já em execução; ignorando esta execução.');
+
+            return self::SUCCESS;
+        }
+
+        try {
+            return $this->process($submitter, $logs);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function process(
         GooglePlaySubmitService $submitter,
         LogIngestService $logs,
     ): int {

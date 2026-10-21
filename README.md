@@ -252,8 +252,8 @@ semelhante ao `--auto-submit` do EAS.
      `android/app/build/outputs/bundle/release/*.aab`);
    - status do release: `completed` (rollout) ou `draft`.
 3. Quando o runner termina a build com sucesso e envia o artefato, a API
-   agenda o submit. O **worker do scheduler do painel** processa os submits
-   pendentes continuamente: localiza o AAB no storage da API, autentica na
+   agenda o submit. O **scheduler do painel** processa os submits pendentes a
+   cada minuto: localiza o AAB no storage da API, autentica na
    Google Play Developer API, faz upload do bundle, associa-o à track e commita
    a edição. O runner só executa a build e envia o artefato; ele não faz
    chamadas para a loja. O submit é responsabilidade da API/scheduler.
@@ -297,7 +297,7 @@ docker compose exec api php artisan platform:diagnose
 # Reconciliação manual (o scheduler roda a cada minuto)
 docker compose exec api php artisan builds:reap
 
-# Processar submits pendentes manualmente (o worker do scheduler roda sozinho)
+# Processar submits pendentes manualmente (o scheduler roda sozinho)
 docker compose exec api php artisan builds:submit
 
 # Retenção (não roda automaticamente — veja docs/operations.md)

@@ -77,10 +77,10 @@ docker compose build api scheduler && docker compose up -d api nginx scheduler w
 docker compose exec api php artisan migrate --force
 ```
 
-O serviço `scheduler` executa `builds:reap` a cada minuto e mantém um worker
-para `builds:submit`. Se ele estiver parado, builds com lease expirada
-permanecem ativas e submits automáticos ficam pendentes até uma execução
-manual:
+O serviço `scheduler` executa `builds:reap` e agenda `builds:submit` a cada
+minuto. O comando de submit usa um lock de cache para não sobrepor execuções.
+Se o scheduler estiver parado, builds com lease expirada permanecem ativas e
+submits automáticos ficam pendentes até uma execução manual:
 
 ```bash
 docker compose exec api php artisan builds:submit
