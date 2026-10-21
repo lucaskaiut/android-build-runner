@@ -10,7 +10,7 @@ dos artefatos. Todas as conexões são de saída — **nenhuma porta é aberta**
 | --- | --- | --- |
 | Windows 10/11 + PowerShell 5.1 | sim | já vem no sistema |
 | Git for Windows | sim | com acesso SSH ao repositório (chave em `%USERPROFILE%\.ssh`) |
-| Node.js + npm | para projetos JS/Expo; obrigatório para submit Google Play | mesma versão usada pelo app |
+| Node.js + npm | para projetos JS/Expo | mesma versão usada pelo app |
 | JDK 17 | para builds Android | configure `JAVA_HOME` |
 | Android SDK | para builds Android | `ANDROID_HOME` com `platforms;android-XX`, `build-tools;XX`, `platform-tools` |
 | Expo CLI | via dependências do projeto | `npx expo` |
@@ -57,7 +57,6 @@ Arquivo gerado: `%ProgramData%\LocalBuildPlatform\runner\config.json`.
 | `api_timeout_seconds` | 30 | timeout HTTP |
 | `api_retry_max` | 5 | tentativas para chamadas normais |
 | `complete_retry_max` | 10 | tentativas para concluir uma build |
-| `submit_timeout_seconds` | 900 | timeout do upload/commit para a loja |
 | `use_system_proxy` | false | use proxy do sistema para a API |
 | `git_ssh_command` | — | ex.: `C:/Windows/System32/OpenSSH/ssh.exe -i C:/Users/build/.ssh/id_ed25519` |
 | `extra_headers` | {} | ex.: service token do Cloudflare Access |
@@ -119,13 +118,10 @@ powershell -ExecutionPolicy Bypass -File scripts\uninstall-service.ps1
    a cada envio/heartbeat.
 6. Interrompe a árvore de processos em cancelamento (`taskkill /T /F`) ou timeout.
 7. Localiza arquivos pelos padrões do perfil, calcula SHA-256 e envia via multipart.
-8. Se o perfil tiver submit automático e o script terminou com sucesso, localiza
-   o AAB, autentica na Google Play e envia/commit a track configurada.
-9. Conclui a build (`success`/`failed`/`cancelled`) com o resultado do submit; a
-   API valida o resultado (código de saída e artefatos esperados) e pode
-   rebaixar para falha.
-10. Se a API já finalizou a build (reaper/cancelamento), o processo local é
-    encerrado e nada é sobrescrito.
+8. Conclui a build (`success`/`failed`/`cancelled`); a API valida o resultado
+   (código de saída e artefatos esperados) e pode rebaixar para falha.
+9. Se a API já finalizou a build (reaper/cancelamento), o processo local é
+   encerrado e nada é sobrescrito.
 
 ## Segredos de build
 
@@ -138,32 +134,6 @@ Cada projeto pode ter variáveis e arquivos secretos cadastrados no painel
   (ex.: `.env`, `credentials.json`, `credentials/android/keystore.jks`),
   validando o caminho e o SHA-256 antes de escrever;
 - substitui os valores das variáveis por `***` nos logs enviados à API.
-
-## Submit automático (Google Play)
-
-O perfil pode habilitar o envio automático após uma build bem-sucedida. O
-runner recebe do painel o package name, a track, o status do release e o
-caminho relativo de um arquivo secreto com a service account JSON.
-
-- O AAB é localizado pelo padrão configurado no perfil; se houver mais de um, o
-  mais recente é usado.
-- O helper `scripts\google-play-submit.js` faz o upload via Google Play
-  Developer API, associa o `versionCode` à track e faz commit da edição.
-- O resultado é enviado no `complete` da build (`submit_status`,
-  `submit_message`, `submit_version_code`). Uma falha de submit não apaga o
-  artefato nem reclassifica uma build de build bem-sucedida; o painel mostra o
-  submit como falho.
-- O arquivo da service account deve estar cadastrado em **Segredos** do projeto
-  e a conta precisa de permissão para gerenciar a track na Play Console.
-
-Validação da credencial sem publicar:
-
-```powershell
-node scripts\google-play-submit.js --config C:\caminho\submit-check.json --check
-```
-
-O JSON de teste contém apenas `serviceAccount` (caminho absoluto do JSON) e
-`packageName`.
 
 ## Scripts de build (exemplos)
 
@@ -214,8 +184,7 @@ powershell -ExecutionPolicy Bypass -File tests\run-tests.ps1 -Filter Config
 Cobrem: configuração, tailing incremental de logs (UTF-8), lotes e fila de
 pendências, caminhos/segurança do workspace, detecção de processo ativo, wrapper
 e propagação de exit code, captura de stdout/stderr, timeout/árvore de processos,
-padrões de artefato, SHA-256, retry do cliente HTTP, caminho relativo de artefato
-e configuração/descoberta do submit automático.
+padrões de artefato, SHA-256, retry do cliente HTTP e caminho relativo de artefato.
 
 ## Retenção e limpeza
 

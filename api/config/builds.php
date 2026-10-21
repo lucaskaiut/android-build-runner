@@ -45,4 +45,15 @@ return [
     'default_timeout_seconds' => (int) env('BUILD_DEFAULT_TIMEOUT', 3600),
     'max_timeout_seconds' => (int) env('BUILD_MAX_TIMEOUT', 21600),
     'build_record_retention_days' => (int) env('BUILD_RECORD_RETENTION_DAYS', 180),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Store submit
+    |--------------------------------------------------------------------------
+    |
+    | The API scheduler uploads successful AABs to the store. This timeout
+    | applies to the Google Play upload/commit request.
+    |
+    */
+    'submit_timeout_seconds' => (int) env('BUILD_SUBMIT_TIMEOUT', 900),
 ];

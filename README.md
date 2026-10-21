@@ -251,39 +251,41 @@ semelhante ao `--auto-submit` do EAS.
    - padrão do AAB (normalmente
      `android/app/build/outputs/bundle/release/*.aab`);
    - status do release: `completed` (rollout) ou `draft`.
-3. Após o script terminar com sucesso, o runner localiza o AAB, autentica na
+3. Quando o runner termina a build com sucesso e envia o artefato, a API
+   agenda o submit. O **worker do scheduler do painel** processa os submits
+   pendentes continuamente: localiza o AAB no storage da API, autentica na
    Google Play Developer API, faz upload do bundle, associa-o à track e commita
-   a edição.
+   a edição. O runner só executa a build e envia o artefato; ele não faz
+   chamadas para a loja. O submit é responsabilidade da API/scheduler.
 4. O resultado fica registrado na build (`submit_status`, `submit_message`,
-   `submit_version_code` e `submitted_at`), inclusive quando a build em si
-   falha ou é cancelada (`skipped`).
+   `submit_version_code`, `submit_started_at` e `submitted_at`), inclusive
+   quando a build em si falha ou é cancelada (`skipped`).
 
 A service account precisa estar adicionada em **Play Console → Users and
 permissions** com permissão para gerenciar a track usada (por exemplo,
 **Manage testing tracks** / **Release to testing tracks**). O JSON continua
-criptografado no banco e é entregue apenas ao runner que reivindicou a build.
+criptografado no banco, é lido pela API/scheduler e **não é entregue ao
+runner** quando o perfil tem submit automático.
 
-> Requer runner **0.2.0** ou superior. Runners antigos não executam o passo de
-> submit e a build aparecerá com `submit_status=failed` quando o perfil tiver
-> submit automático habilitado. Na API, rode `php artisan migrate` para criar
-> as colunas do perfil e da build.
+> Na API, rode `php artisan migrate` para criar as colunas do perfil e da build.
 
-O runner usa o helper `runner/scripts/google-play-submit.js` (Node.js, sem
-dependências externas). Para validar a credencial sem publicar nada:
+O scheduler usa o comando:
 
-```powershell
-# runner/config/submit-check.json:
-# { "serviceAccount": "C:\\caminho\\credentials.json", "packageName": "com.exemplo.app" }
-node scripts\google-play-submit.js --config config\submit-check.json --check
+```bash
+docker compose exec api php artisan builds:submit
 ```
+
+O comando também roda automaticamente no container `scheduler` (o mesmo que
+executa o reaper). O timeout do upload/commit é configurado por
+`BUILD_SUBMIT_TIMEOUT` (padrão `900` segundos).
 
 Limitações atuais:
 
 - somente Google Play e Android App Bundle (`.aab`);
-- o tempo do upload é controlado por `submit_timeout_seconds` no runner
-  (padrão `900`);
 - se a conta usar **Managed publishing**, a release pode ficar aguardando
-  publicação manual no Play Console mesmo após o commit da API.
+  publicação manual no Play Console mesmo após o commit da API;
+- um submit com falha não é repetido automaticamente; a mensagem fica
+  registrada na build. Corrija a causa e gere uma nova build.
 
 ## Operação
 
@@ -293,6 +295,9 @@ docker compose exec api php artisan platform:diagnose
 
 # Reconciliação manual (o scheduler roda a cada minuto)
 docker compose exec api php artisan builds:reap
+
+# Processar submits pendentes manualmente (o worker do scheduler roda sozinho)
+docker compose exec api php artisan builds:submit
 
 # Retenção (não roda automaticamente — veja docs/operations.md)
 docker compose exec api php artisan artifacts:prune --days=30 --dry-run
@@ -325,7 +330,7 @@ powershell -ExecutionPolicy Bypass -File runner\tests\run-tests.ps1
 cd web && npm test && npm run build && npm run lint
 ```
 
-Status atual: 103 testes de backend, 37 do runner (Windows) e 14 do frontend aprovados.
+Status atual: 110 testes de backend, 28 do runner (Windows) e 14 do frontend aprovados.
 
 ## Segurança
 
@@ -336,11 +341,14 @@ Status atual: 103 testes de backend, 37 do runner (Windows) e 14 do frontend apr
   `manage-platform`) e toda alteração sensível é registrada em `audit_logs`.
 - Segredos de build por projeto (variáveis e arquivos, ex.: `.env`, keystore e
   `credentials.json`) são criptografados no banco com `APP_KEY`, write-only no
-  painel (o valor nunca é retornado pela API) e entregues apenas ao runner que
-  reivindicou a build; os valores das variáveis são mascarados nos logs.
+  painel (o valor nunca é retornado pela API) e os demais segredos são
+  entregues ao runner que reivindicou a build; os valores das variáveis são
+  mascarados nos logs.
 - O submit automático usa um arquivo secreto do projeto e guarda apenas o
-  caminho relativo, o package name e a track no perfil; o conteúdo da service
-  account nunca aparece nos logs ou nas respostas da API.
+  caminho relativo, o package name e a track no perfil. O scheduler da API
+  descriptografa somente esse arquivo no momento do submit e o omite do
+  payload entregue ao runner; o conteúdo da service account nunca aparece nos
+  logs ou nas respostas da API.
 - Webhooks validados por HMAC, com idempotência no banco.
 - Artefatos: caminhos gerados pela API, validação de contenção, download
   autorizado e nunca expostos como diretório estático.
@@ -356,6 +364,7 @@ Status atual: 103 testes de backend, 37 do runner (Windows) e 14 do frontend apr
   (a API não possui chaves de acesso aos repositórios). O SHA exato fica
   registrado na build e é validado no checkout.
 - O agendador depende do serviço `scheduler` do compose; sem ele, leases
-  expiradas só são reconciliadas ao executar `builds:reap` manualmente.
+  expiradas só são reconciliadas ao executar `builds:reap` e submits pendentes
+  só são processados ao executar `builds:submit` manualmente.
 - Logs residem no MySQL (MVP). Para volumes muito grandes, veja a política de
   retenção em `docs/operations.md`.

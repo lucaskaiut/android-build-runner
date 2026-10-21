@@ -76,6 +76,7 @@ class BuildService
             'parameters' => $parameters === [] ? null : $parameters,
             'webhook_delivery_id' => $delivery?->id,
             'submit_status' => $profile->auto_submit ? SubmitStatus::Pending : null,
+            'submit_config' => $profile->auto_submit ? $profile->submit_config : null,
         ]);
         $build->status = BuildStatus::Queued;
         $build->queued_at = now();

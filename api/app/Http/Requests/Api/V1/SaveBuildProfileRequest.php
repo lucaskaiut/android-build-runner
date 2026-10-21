@@ -79,7 +79,7 @@ class SaveBuildProfileRequest extends FormRequest
             ],
             'submit_config.track' => ['nullable', 'string', 'max:50', 'regex:/^[a-z][a-z0-9_-]*$/'],
             'submit_config.service_account_file' => [
-                'nullable', 'string', 'max:500', new SecretFilePath,
+                'nullable', 'string', 'max:500', new SecretFilePath, 'regex:/\.json$/i',
             ],
             'submit_config.artifact_pattern' => ['nullable', 'string', 'max:255', new ArtifactPattern],
             'submit_config.release_status' => ['nullable', 'string', Rule::in(['completed', 'draft'])],

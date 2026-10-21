@@ -77,8 +77,13 @@ export function BuildDetailPage() {
     queryKey: ['build', buildId],
     queryFn: () => api.build(buildId),
     refetchInterval: (query) => {
-      const status = query.state.data?.build.status ?? headerStatus
-      return status && activeStatuses.includes(status) ? 3000 : false
+      const build = query.state.data?.build
+      const status = build?.status ?? headerStatus
+
+      if (status && activeStatuses.includes(status)) return 3000
+      if (build?.submit_status === 'pending' || build?.submit_status === 'processing') return 3000
+
+      return false
     },
   })
 
@@ -105,6 +110,7 @@ export function BuildDetailPage() {
 
   const build: Build = buildQuery.data.build
   const isActive = activeStatuses.includes(build.status)
+  const isSubmitActive = build.submit_status === 'pending' || build.submit_status === 'processing'
   const artifacts = artifactsQuery.data?.artifacts ?? build.artifacts ?? []
 
   return (
@@ -212,6 +218,7 @@ export function BuildDetailPage() {
             <MetaItem label="Version code" mono>
               {build.submit_version_code ?? '—'}
             </MetaItem>
+            <MetaItem label="Iniciado em">{formatDateTime(build.submit_started_at)}</MetaItem>
             <MetaItem label="Concluído em">{formatDateTime(build.submitted_at)}</MetaItem>
           </MetaList>
 
@@ -278,14 +285,14 @@ export function BuildDetailPage() {
       <Card
         title="Logs"
         description={
-          isActive
+          isActive || isSubmitActive
             ? 'Saída transmitida em tempo real enquanto a build executa.'
             : 'Saída completa registrada pelo runner.'
         }
       >
         <LogViewer
           buildId={build.id}
-          live={isActive}
+          live={isActive || isSubmitActive}
           onStatus={(status) => setHeaderStatus(status.status)}
           onEnd={() => {
             void queryClient.invalidateQueries({ queryKey: ['build', buildId] })

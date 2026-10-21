@@ -21,6 +21,7 @@ class BuildResource extends JsonResource
             'submit_status_label' => $this->submit_status?->label(),
             'submit_message' => $this->submit_message,
             'submit_version_code' => $this->submit_version_code,
+            'submit_started_at' => $this->submit_started_at,
             'submitted_at' => $this->submitted_at,
             'source' => $this->source->value,
             'source_label' => $this->source->label(),

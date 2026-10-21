@@ -74,6 +74,8 @@ class BuildClaimController extends Controller
         $build->load(['project', 'profile']);
         $profile = $build->profile;
         $project = $build->project;
+        $submitConfig = is_array($build->submit_config) ? $build->submit_config : [];
+        $submitFile = trim((string) ($submitConfig['service_account_file'] ?? ''));
 
         return [
             'id' => $build->id,
@@ -96,10 +98,6 @@ class BuildClaimController extends Controller
                 'artifact_patterns' => $profile->artifact_patterns ?? [],
                 'env' => $profile->env ?? (object) [],
                 'parameters' => $profile->parameterDefinitions(),
-                'auto_submit' => (bool) $profile->auto_submit,
-                'submit_config' => $profile->auto_submit
-                    ? ($profile->submit_config ?? (object) [])
-                    : null,
             ],
             'script' => $profile->build_script,
             'working_directory' => $profile->effectiveWorkingDirectory($project),
@@ -111,6 +109,7 @@ class BuildClaimController extends Controller
             'secret_files' => $project->secretFiles()
                 ->orderBy('path')
                 ->get()
+                ->reject(fn (ProjectSecretFile $file) => $submitFile !== '' && $file->path === $submitFile)
                 ->map(fn (ProjectSecretFile $file) => [
                     'path' => $file->path,
                     'content_base64' => base64_encode($file->content),

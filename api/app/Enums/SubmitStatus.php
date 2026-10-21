@@ -5,6 +5,7 @@ namespace App\Enums;
 enum SubmitStatus: string
 {
     case Pending = 'pending';
+    case Processing = 'processing';
     case Success = 'success';
     case Failed = 'failed';
     case Skipped = 'skipped';
@@ -13,6 +14,7 @@ enum SubmitStatus: string
     {
         return match ($this) {
             self::Pending => 'Aguardando submit',
+            self::Processing => 'Enviando para a loja',
             self::Success => 'Submit concluído',
             self::Failed => 'Submit falhou',
             self::Skipped => 'Submit não executado',
@@ -21,7 +23,12 @@ enum SubmitStatus: string
 
     public function isTerminal(): bool
     {
-        return $this !== self::Pending;
+        return in_array($this, [self::Success, self::Failed, self::Skipped], true);
+    }
+
+    public function isActive(): bool
+    {
+        return ! $this->isTerminal();
     }
 
     /**

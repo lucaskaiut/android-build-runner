@@ -121,9 +121,6 @@ class BuildLifecycleService
         BuildStatus $target,
         ?int $exitCode,
         ?string $errorMessage,
-        ?SubmitStatus $submitStatus = null,
-        ?string $submitMessage = null,
-        ?string $submitVersionCode = null,
     ): Build {
         $this->assertOwnedBy($build, $runner);
         $build->loadMissing('profile');
@@ -165,39 +162,41 @@ class BuildLifecycleService
             }
         }
 
-        $autoSubmit = (bool) ($build->profile?->auto_submit ?? false);
-        $resolvedSubmitStatus = null;
-        $resolvedSubmitMessage = $submitMessage;
-        $resolvedSubmitVersionCode = $submitVersionCode;
+        // The submit configuration is snapshotted when the build is created.
+        // Fall back to the current profile only for builds created before the
+        // feature was deployed.
+        $submitConfig = is_array($build->submit_config) ? $build->submit_config : null;
+        if ($submitConfig === null && $build->profile?->auto_submit) {
+            $profileSubmitConfig = $build->profile->submit_config;
+            $submitConfig = is_array($profileSubmitConfig) ? $profileSubmitConfig : null;
+        }
+
+        $autoSubmit = is_array($submitConfig) && $submitConfig !== [];
+
+        if (! $autoSubmit) {
+            $submitConfig = null;
+        }
+
+        $resolvedSubmitStatus = $build->submit_status;
+        $resolvedSubmitMessage = null;
+        $resolvedSubmitVersionCode = null;
+        $submittedAt = $build->submitted_at;
 
         if ($autoSubmit) {
-            if ($submitStatus !== null) {
-                // The runner may report a submit result even when the API
-                // downgrades the build (e.g. an artifact upload failure).
-                $resolvedSubmitStatus = $submitStatus;
-                $resolvedSubmitMessage = $submitMessage;
-            } elseif ($target === BuildStatus::Success) {
-                $resolvedSubmitStatus = SubmitStatus::Failed;
-                $resolvedSubmitMessage = 'O runner não reportou o resultado do submit automático.';
+            if ($target === BuildStatus::Success) {
+                $resolvedSubmitStatus = $resolvedSubmitStatus ?? SubmitStatus::Pending;
             } else {
                 $resolvedSubmitStatus = SubmitStatus::Skipped;
-                $resolvedSubmitMessage = $submitMessage
-                    ?: 'Build não concluída com sucesso; submit automático não executado.';
+                $resolvedSubmitMessage = 'Build não concluída com sucesso; submit automático não executado.';
                 $resolvedSubmitVersionCode = null;
+                $submittedAt = now();
             }
         } else {
             $resolvedSubmitStatus = null;
             $resolvedSubmitMessage = null;
             $resolvedSubmitVersionCode = null;
+            $submittedAt = null;
         }
-
-        if ($resolvedSubmitStatus === SubmitStatus::Skipped) {
-            $resolvedSubmitVersionCode = null;
-        }
-
-        $submittedAt = $resolvedSubmitStatus !== null && $resolvedSubmitStatus->isTerminal()
-            ? now()
-            : null;
 
         return DB::transaction(function () use (
             $build,
@@ -205,6 +204,8 @@ class BuildLifecycleService
             $target,
             $exitCode,
             $errorMessage,
+            $submitConfig,
+            $autoSubmit,
             $resolvedSubmitStatus,
             $resolvedSubmitMessage,
             $resolvedSubmitVersionCode,
@@ -237,8 +238,10 @@ class BuildLifecycleService
             $build->forceFill([
                 'status' => $target,
                 'submit_status' => $resolvedSubmitStatus,
+                'submit_config' => $submitConfig,
                 'submit_message' => $resolvedSubmitMessage,
                 'submit_version_code' => $resolvedSubmitVersionCode,
+                'submit_lease_expires_at' => null,
                 'submitted_at' => $submittedAt,
                 'exit_code' => $exitCode,
                 'error_message' => $target === BuildStatus::Success ? null : $errorMessage,
@@ -265,19 +268,13 @@ class BuildLifecycleService
 
             $this->logs->appendSystem($build, $summary);
 
-            if ($resolvedSubmitStatus !== null) {
-                $submitSummary = match ($resolvedSubmitStatus) {
-                    SubmitStatus::Success => 'Submit para a loja concluído'
-                        .($resolvedSubmitVersionCode !== null ? ' (versionCode '.$resolvedSubmitVersionCode.')' : '')
-                        .'.',
-                    SubmitStatus::Failed => 'Submit para a loja falhou'
-                        .($resolvedSubmitMessage !== null ? ': '.$resolvedSubmitMessage : '.'),
-                    SubmitStatus::Skipped => 'Submit automático não executado'
-                        .($resolvedSubmitMessage !== null ? ': '.$resolvedSubmitMessage : '.'),
-                    SubmitStatus::Pending => 'Submit automático pendente.',
-                };
-
-                $this->logs->appendSystem($build, $submitSummary);
+            if ($autoSubmit) {
+                $this->logs->appendSystem(
+                    $build,
+                    $target === BuildStatus::Success
+                        ? 'Submit automático na fila para a loja.'
+                        : 'Submit automático não executado: '.$resolvedSubmitMessage,
+                );
             }
 
             return $build->refresh();
@@ -306,7 +303,7 @@ class BuildLifecycleService
                 'duration_ms' => 0,
             ];
 
-            if ($build->profile?->auto_submit) {
+            if ($build->submit_config !== null) {
                 $fields['submit_status'] = SubmitStatus::Skipped;
                 $fields['submit_message'] = 'Build cancelada antes da execução; submit automático não executado.';
                 $fields['submitted_at'] = now();
@@ -363,7 +360,7 @@ class BuildLifecycleService
                 'lease_expires_at' => null,
             ];
 
-            if ($build->profile?->auto_submit) {
+            if ($build->submit_config !== null) {
                 $fields['submit_status'] = SubmitStatus::Skipped;
                 $fields['submit_message'] = 'Execução interrompida; submit automático não executado.';
                 $fields['submitted_at'] = now();
@@ -381,7 +378,7 @@ class BuildLifecycleService
             ->with(['profile', 'runner'])
             ->get()
             ->filter(function (Build $build): bool {
-                $submitGrace = $build->profile?->auto_submit ? self::SUBMIT_GRACE_SECONDS : 0;
+                $submitGrace = $build->submit_config !== null ? self::SUBMIT_GRACE_SECONDS : 0;
                 $deadline = ($build->started_at ?? $build->claimed_at)?->copy()
                     ->addSeconds(
                         ($build->profile?->timeout_seconds ?? (int) config('builds.default_timeout_seconds'))
@@ -405,7 +402,7 @@ class BuildLifecycleService
                 'cancel_requested_at' => $build->cancel_requested_at ?? now(),
             ];
 
-            if ($build->profile?->auto_submit) {
+            if ($build->submit_config !== null) {
                 $fields['submit_status'] = SubmitStatus::Skipped;
                 $fields['submit_message'] = 'Tempo máximo excedido; submit automático não executado.';
                 $fields['submitted_at'] = now();

@@ -66,7 +66,8 @@ class DiagnosePlatform extends Command
         $this->line('Retenção de logs: '.config('builds.log_retention_days').' dias');
         $this->newLine();
         $this->line('Agendador: aguarde "php artisan schedule:work" (serviço scheduler do compose).');
-        $this->line('Comandos de manutenção: builds:reap, artifacts:prune, logs:prune');
+        $this->line('Submit automático: worker "php artisan builds:submit" no serviço scheduler.');
+        $this->line('Comandos de manutenção: builds:reap, builds:submit, artifacts:prune, logs:prune');
 
         return self::SUCCESS;
     }

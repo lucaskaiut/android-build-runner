@@ -31,7 +31,6 @@ $ProgressPreference = 'SilentlyContinue'
 . (Join-Path $PSScriptRoot 'Secrets.ps1')
 . (Join-Path $PSScriptRoot 'Workspace.ps1')
 . (Join-Path $PSScriptRoot 'ArtifactCollector.ps1')
-. (Join-Path $PSScriptRoot 'Submit.ps1')
 
 # ---------------------------------------------------------------------------
 # API interactions
@@ -150,10 +149,7 @@ function Send-CompleteRequest {
         [Parameter(Mandatory = $true)][int]$BuildId,
         [Parameter(Mandatory = $true)][string]$Status,
         $ExitCode = $null,
-        [string]$ErrorMessage = '',
-        [string]$SubmitStatus = '',
-        [string]$SubmitMessage = '',
-        [string]$SubmitVersionCode = ''
+        [string]$ErrorMessage = ''
     )
 
     $body = @{ status = $Status }
@@ -166,18 +162,6 @@ function Send-CompleteRequest {
 
     if ($ErrorMessage) {
         $body['error_message'] = $ErrorMessage.Substring(0, [Math]::Min(2000, $ErrorMessage.Length))
-    }
-
-    if ($SubmitStatus) {
-        $body['submit_status'] = $SubmitStatus
-    }
-
-    if ($SubmitMessage) {
-        $body['submit_message'] = $SubmitMessage.Substring(0, [Math]::Min(2000, $SubmitMessage.Length))
-    }
-
-    if ($SubmitVersionCode) {
-        $body['submit_version_code'] = $SubmitVersionCode
     }
 
     try {
@@ -466,88 +450,10 @@ function Invoke-BuildWorkflow {
     }
 
     # ------------------------------------------------------------------
-    # Automatic store submit
-    # ------------------------------------------------------------------
-    $submitResult = $null
-    $submitStatus = ''
-    $submitMessage = ''
-    $submitVersionCode = ''
-
-    if ($context.AutoSubmit) {
-        if ($result.Status -eq 'success') {
-            $submitResult = Invoke-BuildSubmit -Api $Api -Config $Config -Context $context -LogState $logState
-        } else {
-            $submitResult = @{
-                Status = 'skipped'
-                Message = 'Build não concluída com sucesso; submit automático não executado.'
-                VersionCode = ''
-                AbortReason = ''
-            }
-        }
-
-        if ($null -eq $submitResult) {
-            $submitResult = @{
-                Status = 'failed'
-                Message = 'O submit automático não retornou um resultado.'
-                VersionCode = ''
-                AbortReason = ''
-            }
-        }
-
-        if ($submitResult.AbortReason -eq 'api') {
-            Write-RunnerLog "Build #$buildId finalizada pela API durante o submit; nada a reportar." 'WARN'
-            return
-        }
-
-        if ($submitResult.Status -eq 'cancelled') {
-            $result.Status = 'cancelled'
-            $result.ErrorMessage = $submitResult.Message
-            $submitResult = @{
-                Status = 'skipped'
-                Message = $submitResult.Message
-                VersionCode = ''
-                AbortReason = ''
-            }
-        }
-
-        $submitStatus = $submitResult.Status
-        $submitMessage = $submitResult.Message
-        $submitVersionCode = $submitResult.VersionCode
-
-        if ($submitStatus -eq 'success') {
-            $submitSuffix = if ($submitVersionCode) { " (versionCode $submitVersionCode)" } else { '' }
-            $submitSummary = "Executor: submit concluído$submitSuffix."
-        } elseif ($submitStatus -eq 'failed') {
-            $submitSummary = "Executor: submit falhou: $submitMessage"
-        } else {
-            $submitSummary = "Executor: submit não executado: $submitMessage"
-        }
-
-        if ($submitStatus -eq 'success') {
-            Write-RunnerLog "Submit da build ${buildId}: sucesso (versionCode $submitVersionCode)."
-        } elseif ($submitStatus -eq 'failed') {
-            Write-RunnerLog "Submit da build ${buildId}: falhou - $submitMessage" 'ERROR'
-        } else {
-            Write-RunnerLog "Submit da build ${buildId}: ignorado - $submitMessage" 'WARN'
-        }
-
-        Add-SystemLogLine -LogState $logState -Message $submitSummary
-
-        $lines = Get-SystemBufferLines -LogState $logState
-        if ($lines.Count -gt 0) {
-            foreach ($batch in (New-LogBatch -LogState $logState -Lines $lines -MaxLines 200 -MaxBytes 262144)) {
-                Add-PendingLogBatch -LogState $logState -Batch $batch
-            }
-        }
-        $null = Send-PendingLogBatches -Api $Api -BuildId $buildId -LogState $logState
-    }
-
-    # ------------------------------------------------------------------
     # Completion
     # ------------------------------------------------------------------
     $null = Send-CompleteRequest -Api $Api -Config $Config -BuildId $buildId `
-        -Status $result.Status -ExitCode $result.ExitCode -ErrorMessage $result.ErrorMessage `
-        -SubmitStatus $submitStatus -SubmitMessage $submitMessage -SubmitVersionCode $submitVersionCode
+        -Status $result.Status -ExitCode $result.ExitCode -ErrorMessage $result.ErrorMessage
 
     if ($result.Status -eq 'success' -and [bool]$Config['cleanup_successful_builds']) {
         try {

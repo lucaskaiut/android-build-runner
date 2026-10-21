@@ -47,6 +47,7 @@ export function BuildStatusBadge({ status, label }: { status: BuildStatus; label
 
 const submitStatusTone: Record<SubmitStatus, SemanticTone> = {
   pending: 'info',
+  processing: 'accent',
   success: 'success',
   failed: 'danger',
   skipped: 'warning',
@@ -57,7 +58,7 @@ export function SubmitStatusBadge({ status, label }: { status: SubmitStatus; lab
     <StatusPill
       tone={submitStatusTone[status] ?? 'neutral'}
       label={label ?? status}
-      pulse={status === 'pending'}
+      pulse={status === 'pending' || status === 'processing'}
     />
   )
 }

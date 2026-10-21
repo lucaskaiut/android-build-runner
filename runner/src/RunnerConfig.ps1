@@ -40,7 +40,6 @@ function New-RunnerConfig {
         api_timeout_seconds = 30
         api_retry_max = 5
         complete_retry_max = 10
-        submit_timeout_seconds = 900
         use_system_proxy = $false
         git_ssh_command = ''
         extra_headers = @{}
@@ -84,7 +83,7 @@ function New-RunnerConfig {
     foreach ($key in @('poll_interval_seconds', 'idle_heartbeat_seconds', 'build_heartbeat_seconds',
             'log_batch_interval_seconds', 'log_batch_max_lines', 'log_batch_max_bytes', 'log_read_chunk_bytes',
             'max_pending_log_lines', 'default_timeout_seconds', 'api_timeout_seconds', 'api_retry_max',
-            'complete_retry_max', 'submit_timeout_seconds')) {
+            'complete_retry_max')) {
         $config[$key] = [int]$config[$key]
     }
 
@@ -144,10 +143,6 @@ function Assert-RunnerConfig {
 
     if ([int]$Config['log_batch_max_lines'] -lt 1 -or [int]$Config['log_batch_max_lines'] -gt 500) {
         $errors.Add('log_batch_max_lines deve estar entre 1 e 500.')
-    }
-
-    if ([int]$Config['submit_timeout_seconds'] -lt 60 -or [int]$Config['submit_timeout_seconds'] -gt 7200) {
-        $errors.Add('submit_timeout_seconds deve estar entre 60 e 7200.')
     }
 
     if ($errors.Count -gt 0) {

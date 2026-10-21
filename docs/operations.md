@@ -73,12 +73,18 @@ docker compose exec api php artisan builds:reap
 docker compose logs scheduler --tail 20
 
 # Atualizar a aplicação
-docker compose build api && docker compose up -d api nginx scheduler web
+docker compose build api scheduler && docker compose up -d api nginx scheduler web
 docker compose exec api php artisan migrate --force
 ```
 
-O serviço `scheduler` executa `builds:reap` a cada minuto. Se ele estiver
-parado, builds com lease expirada permanecem ativas até uma execução manual.
+O serviço `scheduler` executa `builds:reap` a cada minuto e mantém um worker
+para `builds:submit`. Se ele estiver parado, builds com lease expirada
+permanecem ativas e submits automáticos ficam pendentes até uma execução
+manual:
+
+```bash
+docker compose exec api php artisan builds:submit
+```
 
 ## Observabilidade
 
@@ -101,3 +107,4 @@ parado, builds com lease expirada permanecem ativas até uma execução manual.
 | Docker reiniciado | dados persistem no volume; migrations são idempotentes na subida |
 | Upload de artefato interrompido | retry automático no runner; a API é idempotente por `(build, sha256, tamanho, caminho)` |
 | Logs duplicados em retry | ignorados por `(batch_id, line_no)` |
+| Submit Google Play falhou | a build continua `success`; o submit fica `failed` com a mensagem no painel. Corrija a causa e gere uma nova build. |

@@ -58,11 +58,14 @@ class BuildCreationTest extends TestCase
         $project = Project::factory()->create();
         $profile = BuildProfile::factory()->withAutoSubmit()->create(['project_id' => $project->id]);
 
-        $this->postJson('/api/v1/projects/'.$project->id.'/builds', [
+        $response = $this->postJson('/api/v1/projects/'.$project->id.'/builds', [
             'build_profile_id' => $profile->id,
         ])->assertCreated()
             ->assertJsonPath('build.submit_status', 'pending')
             ->assertJsonPath('build.submit_status_label', 'Aguardando submit');
+
+        $build = Build::find($response->json('build.id'));
+        $this->assertSame('com.example.app', $build->submit_config['package_name']);
     }
 
     public function test_build_accepts_explicit_commit_sha_and_validates_format(): void

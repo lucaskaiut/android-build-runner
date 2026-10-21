@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\BuildStatus;
-use App\Enums\SubmitStatus;
 use App\Models\Build;
 use App\Models\BuildProfile;
 use App\Models\Project;
@@ -88,10 +87,7 @@ class RunnerProtocolTest extends TestCase
             'working_directory' => 'apps/mobile',
             'webhook_secret' => 'super-secret-value',
         ]);
-        $profile = BuildProfile::factory()->withAutoSubmit([
-            'package_name' => 'com.example.app',
-            'track' => 'alpha',
-        ])->create([
+        $profile = BuildProfile::factory()->create([
             'project_id' => $project->id,
             'build_script' => 'Write-Output "build"',
             'env' => ['APP_VARIANT' => 'preview'],
@@ -109,9 +105,6 @@ class RunnerProtocolTest extends TestCase
             ->assertJsonPath('build.id', $build->id)
             ->assertJsonPath('build.project.repo_url', 'git@github.com:acme/app.git')
             ->assertJsonPath('build.profile.env.APP_VARIANT', 'preview')
-            ->assertJsonPath('build.profile.auto_submit', true)
-            ->assertJsonPath('build.profile.submit_config.package_name', 'com.example.app')
-            ->assertJsonPath('build.profile.submit_config.track', 'alpha')
             ->assertJsonPath('build.script', 'Write-Output "build"')
             ->assertJsonPath('build.working_directory', 'apps/mobile')
             ->assertJsonPath('build.lease_seconds', (int) config('builds.lease_seconds'));
@@ -355,61 +348,6 @@ class RunnerProtocolTest extends TestCase
             'status' => 'success',
             'exit_code' => 0,
         ])->assertOk()->assertJsonPath('build.status', 'success');
-    }
-
-    public function test_complete_records_submit_result_for_auto_submit_profile(): void
-    {
-        $runner = Runner::factory()->withToken()->create();
-        $this->actingAsRunner($runner);
-
-        $project = Project::factory()->create();
-        $profile = BuildProfile::factory()->withAutoSubmit()->create(['project_id' => $project->id]);
-        $build = Build::factory()->running($runner->id)->create([
-            'project_id' => $project->id,
-            'build_profile_id' => $profile->id,
-        ]);
-
-        $this->postJson('/api/runner/v1/builds/'.$build->id.'/complete', [
-            'status' => 'success',
-            'exit_code' => 0,
-            'submit_status' => 'success',
-            'submit_message' => 'enviado',
-            'submit_version_code' => '21',
-        ])
-            ->assertOk()
-            ->assertJsonPath('build.status', 'success')
-            ->assertJsonPath('build.submit_status', 'success')
-            ->assertJsonPath('build.submit_version_code', '21');
-
-        $build->refresh();
-        $this->assertSame(SubmitStatus::Success, $build->submit_status);
-        $this->assertSame('enviado', $build->submit_message);
-        $this->assertSame('21', $build->submit_version_code);
-        $this->assertNotNull($build->submitted_at);
-    }
-
-    public function test_complete_marks_submit_skipped_when_the_build_fails(): void
-    {
-        $runner = Runner::factory()->withToken()->create();
-        $this->actingAsRunner($runner);
-
-        $project = Project::factory()->create();
-        $profile = BuildProfile::factory()->withAutoSubmit()->create(['project_id' => $project->id]);
-        $build = Build::factory()->running($runner->id)->create([
-            'project_id' => $project->id,
-            'build_profile_id' => $profile->id,
-        ]);
-
-        $this->postJson('/api/runner/v1/builds/'.$build->id.'/complete', [
-            'status' => 'failed',
-            'exit_code' => 1,
-            'error_message' => 'gradle falhou',
-        ])->assertOk()->assertJsonPath('build.status', 'failed');
-
-        $build->refresh();
-        $this->assertSame(SubmitStatus::Skipped, $build->submit_status);
-        $this->assertStringContainsString('não concluída', $build->submit_message);
-        $this->assertNotNull($build->submitted_at);
     }
 
     public function test_control_endpoint_returns_cancel_flag(): void

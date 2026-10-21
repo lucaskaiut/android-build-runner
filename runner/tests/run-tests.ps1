@@ -27,7 +27,6 @@ $runnerRoot = Split-Path -Parent $testsDirectory
 . (Join-Path $runnerRoot 'src\Secrets.ps1')
 . (Join-Path $runnerRoot 'src\Workspace.ps1')
 . (Join-Path $runnerRoot 'src\ArtifactCollector.ps1')
-. (Join-Path $runnerRoot 'src\Submit.ps1')
 
 Write-Host '=== Local Build Platform - testes do runner ==='
 Write-Host ''

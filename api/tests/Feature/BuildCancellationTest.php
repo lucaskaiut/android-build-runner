@@ -43,6 +43,7 @@ class BuildCancellationTest extends TestCase
             'project_id' => $project->id,
             'build_profile_id' => $profile->id,
             'submit_status' => SubmitStatus::Pending,
+            'submit_config' => $profile->submit_config,
         ]);
 
         $this->postJson('/api/v1/builds/'.$build->id.'/cancel')

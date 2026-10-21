@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\Runner\V1;
 
 use App\Enums\BuildStatus;
-use App\Enums\SubmitStatus;
 use App\Exceptions\BuildConflictException;
 use App\Http\Controllers\Controller;
 use App\Models\Build;
@@ -92,13 +91,6 @@ class BuildExecutionController extends Controller
             'status' => ['required', 'string', Rule::in(['success', 'failed', 'cancelled'])],
             'exit_code' => ['nullable', 'integer', 'min:-32768', 'max:32767'],
             'error_message' => ['nullable', 'string', 'max:2000'],
-            'submit_status' => ['nullable', 'string', Rule::in([
-                SubmitStatus::Success->value,
-                SubmitStatus::Failed->value,
-                SubmitStatus::Skipped->value,
-            ])],
-            'submit_message' => ['nullable', 'string', 'max:2000'],
-            'submit_version_code' => ['nullable', 'string', 'max:32'],
         ]);
 
         /** @var Runner $runner */
@@ -110,9 +102,6 @@ class BuildExecutionController extends Controller
             BuildStatus::from($data['status']),
             $data['exit_code'] ?? null,
             $data['error_message'] ?? null,
-            isset($data['submit_status']) ? SubmitStatus::from($data['submit_status']) : null,
-            $data['submit_message'] ?? null,
-            $data['submit_version_code'] ?? null,
         );
 
         return response()->json([

@@ -1,5 +1,5 @@
 export type BuildStatus = 'queued' | 'preparing' | 'running' | 'success' | 'failed' | 'cancelled'
-export type SubmitStatus = 'pending' | 'success' | 'failed' | 'skipped'
+export type SubmitStatus = 'pending' | 'processing' | 'success' | 'failed' | 'skipped'
 export type BuildSource = 'manual' | 'api' | 'webhook'
 export type RunnerStatus = 'online' | 'offline' | 'disabled'
 export type LogStreamType = 'stdout' | 'stderr' | 'system'
@@ -121,6 +121,7 @@ export interface Build {
   submit_status_label: string | null
   submit_message: string | null
   submit_version_code: string | null
+  submit_started_at: string | null
   submitted_at: string | null
   source: BuildSource
   source_label: string

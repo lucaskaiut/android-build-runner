@@ -66,6 +66,8 @@ const schema = z
       serviceAccount.includes(':')
     ) {
       add('submit_service_account_file', 'Use um caminho relativo dentro do projeto, sem "..".')
+    } else if (!serviceAccount.toLowerCase().endsWith('.json')) {
+      add('submit_service_account_file', 'Use um arquivo .json da service account.')
     }
 
     const artifactPattern = values.submit_artifact_pattern.trim()

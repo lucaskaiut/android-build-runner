@@ -49,12 +49,14 @@ export function LogViewer({
   const history = useQuery({
     queryKey: ['build-logs', buildId],
     queryFn: async () => {
-      const page = await api.buildLogs(buildId, 0, 1000)
+      const page = await api.buildLogs(buildId, lastIdRef.current, 1000)
       upsertLogs(page.logs)
 
       return page
     },
-    refetchInterval: usingFallback && live ? 2000 : false,
+    // SSE is the primary source while the build runs. Polling also covers
+    // submit logs appended by the API after the build itself has finished.
+    refetchInterval: live ? 2000 : false,
   })
 
   // SSE stream with automatic reconnection from the last received id.
